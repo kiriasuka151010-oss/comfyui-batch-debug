@@ -11,7 +11,6 @@
   h1{font-size:2rem;margin-bottom:.25rem;color:#fff}
   h2{font-size:1.4rem;margin:2.5rem 0 1rem;padding-bottom:.5rem;border-bottom:1px solid var(--border);color:#fff}
   h3{font-size:1.1rem;margin:1.5rem 0 .5rem;color:var(--accent)}
-  h4{font-size:.95rem;margin:1rem 0 .3rem;color:var(--text)}
   p{margin:.6rem 0;color:var(--text)}
   .subtitle{color:var(--muted);font-size:.95rem;margin-bottom:2rem}
   .badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:.78rem;font-weight:600;margin-right:6px}
@@ -36,16 +35,8 @@
   .pipeline .node.execute{border-color:var(--accent)}
   .pipeline .node.save{border-color:var(--green)}
   .tip{background:#1a2a3a;border-left:3px solid var(--accent);padding:.8rem 1rem;border-radius:4px;margin:1rem 0;font-size:.9rem}
-  .warning{background:#3a2a1a;border-left:3px solid var(--orange);padding:.8rem 1rem;border-radius:4px;margin:1rem 0;font-size:.9rem}
-  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:1rem 0}
-  .two-col .mode-card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:1rem}
-  .two-col .mode-card h4{margin:0 0 .5rem}
-  .two-col .mode-card p{font-size:.85rem;color:var(--muted);margin:0}
-  .two-col .mode-card.active{border-color:var(--green)}
   .folder-tree{background:#1c2128;border-radius:6px;padding:1rem;font-family:'SF Mono','Fira Code',monospace;font-size:.8rem;margin:1rem 0;line-height:1.8}
   .folder-tree .comment{color:var(--muted)}
-  .resume-block{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1.5rem;margin:1.5rem 0}
-  .resume-block pre{background:#1c2128;padding:1rem;border-radius:6px;font-size:.82rem;line-height:1.6;overflow-x:auto}
   hr{border:none;border-top:1px solid var(--border);margin:2rem 0}
   .footer{text-align:center;color:var(--muted);font-size:.8rem;margin-top:3rem}
 </style>
@@ -60,6 +51,127 @@
   <span class="badge badge-orange">D站 Pipeline</span>
   <span class="badge badge-red">HTML Viewer</span>
 </div>
+
+<!-- ──────────────────────────────────────── -->
+<div class="hero">
+  <h2>一句话说清楚</h2>
+  <ul>
+    <li><strong>做什么：</strong>把 AI 绘图调参从"手动改参数 → 点 Queue → 记笔记"变成"配置一次 → 批量扫描 → 打分筛选"</li>
+    <li><strong>解决什么：</strong>LoRA 该用多大权重？CFG 调到几效果好？不再靠猜，用数据说话</li>
+    <li><strong>怎么用：</strong>D站选参考图 → 配 LoRA 权重范围 + CFG 范围 → 点 Queue → 打开 viewer 打分</li>
+  </ul>
+</div>
+
+<!-- ──────────────────────────────────────── -->
+<h2>一、工作流程</h2>
+
+<div class="pipeline">
+  <span class="node">🖼 D站选图<br><small>AnimaDex + Danbooru</small></span>
+  <span class="arrow">→</span>
+  <span class="node">🏷 Tag 反推<br><small>AnimaPromptConverter</small></span>
+  <span class="arrow">→</span>
+  <span class="node config">⚙ 配置扫描<br><small>6槽LoRA + CFG</small></span>
+  <span class="arrow">→</span>
+  <span class="node execute">🚀 批量执行<br><small>笛卡尔积</small></span>
+  <span class="arrow">→</span>
+  <span class="node save">📦 结构化输出<br><small>sweep 文件夹</small></span>
+  <span class="arrow">→</span>
+  <span class="node">⭐ 评分筛选<br><small>viewer.html</small></span>
+</div>
+
+<p>不需要手写 prompt。D 站选图 → Tag 自动反推 → 参数扫描 → 出图 → 打分，全链路。</p>
+
+<!-- ──────────────────────────────────────── -->
+<h2>二、三个节点</h2>
+
+<div class="card">
+  <h3><span class="badge badge-purple">Config</span> BatchDebugConfig</h3>
+  <p>6 个 LoRA 槽，每个独立：下拉选模型 / 开关 ON-OFF / 权重范围。配合 CFG 和 Steps 扫描范围，所有参数做<strong>笛卡尔积</strong>。Seed 固定不变，确保公平对比。</p>
+  <table>
+    <tr><th>参数</th><th>类型</th><th>说明</th></tr>
+    <tr><td><code>prompts</code></td><td>多行</td><td>留空即可——D 站 pipeline 接管 prompt</td></tr>
+    <tr><td><code>lora_N_enabled</code></td><td>开关</td><td>ON 才参与扫描（默认 OFF）</td></tr>
+    <tr><td><code>lora_N_name</code></td><td>下拉</td><td>自动列出 ComfyUI loras 目录下所有 .safetensors 文件</td></tr>
+    <tr><td><code>lora_N_weight_min / max / steps</code></td><td>Float / Int</td><td>权重扫描范围（如 0.3→1.0×3 → [0.3, 0.65, 1.0]）</td></tr>
+    <tr><td><code>lora_weight_clip</code></td><td>Float</td><td>全局 CLIP 倍率，对所有 LoRA 的 clip weight 生效</td></tr>
+    <tr><td><code>cfg_min / max / steps</code></td><td>Float / Int</td><td>CFG 扫描范围</td></tr>
+    <tr><td><code>seed</code></td><td>Int</td><td>固定 seed，所有组合共用</td></tr>
+    <tr><td><code>steps_min / max / count</code></td><td>Int</td><td>采样步数扫描范围</td></tr>
+  </table>
+  <div class="tip"><strong>组合数 = LoRA 槽权重组合 × CFG 数 × Steps 数。</strong>超过 200 张会打印内存警告。</div>
+</div>
+
+<div class="card">
+  <h3><span class="badge badge-purple">Execute</span> BatchDebugExecute</h3>
+  <p>接收上游 MODEL / CLIP / VAE / CONDITIONING / LATENT，遍历所有参数组合。链式叠加多 LoRA → 编码/直通 conditioning → KSampler → VAE 解码。</p>
+  <table>
+    <tr><th>参数</th><th>说明</th></tr>
+    <tr><td><code>model / clip / vae</code></td><td>从 UNETLoader / CLIPLoader / VAELoader 接入（Anima 模型）</td></tr>
+    <tr><td><code>positive / negative</code></td><td>从 CLIPTextEncode 接入。conditioning 模式下直通，不重新编码</td></tr>
+    <tr><td><code>latent_image</code></td><td>从 EmptyLatentImage 接入，控制出图分辨率</td></tr>
+    <tr><td><code>config_json</code></td><td>从 BatchDebugConfig 接入</td></tr>
+    <tr><td><code>prompt_source</code></td><td><strong>conditioning</strong>：上游 CLIPTextEncode 直通（推荐）；<strong>reencode</strong>：节点内重新编码</td></tr>
+    <tr><td><code>sampler_name / scheduler</code></td><td>采样器 & 调度器，从 ComfyUI 实时拉取列表</td></tr>
+    <tr><td><code>denoise</code></td><td>降噪强度，文生图保持 1.0</td></tr>
+    <tr><td><code>save_preview</code></td><td>每轮实时存预览图到 output 目录</td></tr>
+    <tr><td><code>preview_prefix</code></td><td>预览图输出子目录</td></tr>
+  </table>
+  <div class="tip"><strong>conditioning 模式：</strong>AnimaPromptConverter → CLIPTextEncode 的 conditioning 直通 KSampler，保证画质与工作流一致。Config 里的 prompt 仅用于元数据标注。</div>
+</div>
+
+<div class="card">
+  <h3><span class="badge badge-green">GridSave</span> BatchDebugGridSave</h3>
+  <p>接收 Execute 的图片批次 → 输出结构化 sweep 文件夹。</p>
+  <table>
+    <tr><th>参数</th><th>说明</th></tr>
+    <tr><td><code>images / metadata_json</code></td><td>从 Execute 的输出接入</td></tr>
+    <tr><td><code>columns / cell_width</code></td><td>拼图列数 / 格宽，标签自动截断</td></tr>
+    <tr><td><code>max_grid_dimension</code></td><td>拼图最大尺寸，超出自适应缩放</td></tr>
+    <tr><td><code>label_font_size / label_format</code></td><td>标注字体大小 & 模板（变量: <code>{lora_info} {cfg} {steps}</code>）</td></tr>
+    <tr><td><code>filename_prefix</code></td><td>输出子目录，支持 <code>%date%</code> <code>%time%</code> 占位符</td></tr>
+    <tr><td><code>save_individual / save_grid / save_metadata_csv</code></td><td>独立开关：原图 / 拼图 / CSV</td></tr>
+  </table>
+</div>
+
+<!-- ──────────────────────────────────────── -->
+<h2>三、输出结构</h2>
+<p>每次扫描生成一个独立文件夹：</p>
+
+<div class="folder-tree">
+sweep_20260621_163000/<br>
+├── img_0000.png          <span class="comment">← 每张原图，序号与 CSV 行对应</span><br>
+├── img_0001.png<br>
+├── ...<br>
+├── grid.png              <span class="comment">← 标注拼图预览</span><br>
+├── metadata.csv          <span class="comment">← 参数表</span><br>
+├── report.json           <span class="comment">← viewer 数据源</span><br>
+└── viewer.html           <span class="comment">← 双击打开，拖入 report.json 即可评分筛选</span>
+</div>
+
+<!-- ──────────────────────────────────────── -->
+<h2>四、评分查看器</h2>
+
+<p><code>viewer.html</code> 是独立可复用工具——所有扫描共用一个：</p>
+<table>
+  <tr><th>功能</th><th>操作</th></tr>
+  <tr><td>⭐ 评分</td><td>点击卡片下方星星打分（1-5），存在浏览器本地</td></tr>
+  <tr><td>🔍 筛选</td><td>按 CFG / Steps / LoRA 下拉筛选，或搜索关键词</td></tr>
+  <tr><td>📊 排序</td><td>按序号 / CFG / Steps / 评分排序</td></tr>
+  <tr><td>🖼 放大</td><td>双击图片 lightbox 全屏</td></tr>
+  <tr><td>📥 导出</td><td>一键导出带评分的 CSV</td></tr>
+  <tr><td>📂 加载</td><td>拖入 report.json 即加载（不受浏览器安全策略限制）</td></tr>
+</table>
+
+<!-- ──────────────────────────────────────── -->
+<h2>五、技术要点</h2>
+<table>
+  <tr><th>特性</th><th>实现</th></tr>
+  <tr><td>多 LoRA 链式</td><td><code>load_lora_for_models</code> 逐层叠加，模型自动 clone 不污染原始引用</td></tr>
+  <tr><td>Conditioning 直通</td><td>上游 CLIPTextEncode 的 conditioning 直接传给 KSampler——保证 D 站 tag 拼装质量</td></tr>
+  <tr><td>去重保护</td><td>min==max 时自动去重，不生成重复参数组合</td></tr>
+  <tr><td>中断安全</td><td>try/finally 包裹 + LoRA 缓存清理，Ctrl+C 不泄漏 GPU 内存</td></tr>
+  <tr><td>零额外依赖</td><td>仅使用 ComfyUI 内置 torch / numpy / PIL</td></tr>
+</table>
 
 <hr>
 <div class="footer">ComfyUI Batch Debug Plugin · v2.1 · 开源</div>
