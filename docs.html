@@ -190,34 +190,37 @@
 
 <!-- Node 1 -->
 <div class="card">
-  <h3><span class="badge badge-purple">Config</span> BatchDebugConfig — 参数扫描配置</h3>
-  <p>设置你要扫描的参数范围和组合。所有参数做<strong>笛卡尔积</strong>，输出一个 JSON 配置字符串传给 Execute。</p>
+  <h3><span class="badge badge-purple">Config</span> BatchDebugConfig — 6 槽 LoRA 扫描</h3>
+  <p>下拉选取 LoRA → 开关 ON/OFF → 设权重范围。<strong>6 个槽独立控制，多 LoRA 做笛卡尔积。</strong></p>
 
   <table>
     <tr><th>参数</th><th>类型</th><th>说明</th></tr>
     <tr>
       <td><code>prompts</code></td>
       <td>多行文本</td>
-      <td>每行一个 prompt。<strong>留空即可</strong>（conditioning 模式下由 D站 pipeline 接管 prompt）。</td>
+      <td><strong>留空即可</strong>——D站 pipeline 接管 prompt。</td>
     </tr>
     <tr>
-      <td><code>lora_sweep</code></td>
-      <td>多行文本</td>
-      <td><strong>多 LoRA 扫描</strong>。每行一个 LoRA：<code>文件名 最小值 最大值 步数 [clip_mult]</code><br>
-      例：<code>anima线稿画风.safetensors 0.3 1.0 4</code><br>
-      <code>#</code>开头为注释行。多个 LoRA 做笛卡尔积。</td>
+      <td><code>lora_weight_clip</code></td>
+      <td>Float</td>
+      <td>全局 CLIP 倍率，对所有 LoRA 的 clip weight 生效。</td>
     </tr>
-    <tr><td><code>lora_weight_clip</code></td><td>Float</td><td>全局 CLIP 强度倍率，对所有 LoRA 的 clip weight 生效。</td></tr>
-    <tr><td><code>cfg_min / max / steps</code></td><td>Float / Int</td><td>CFG 扫描范围。如 3→9 分 4 步 → [3, 5, 7, 9]</td></tr>
-    <tr><td><code>seed</code></td><td>Int</td><td><strong>固定 seed</strong>（不扫描！）。所有组合用同一个 seed，确保公平对比。</td></tr>
+    <tr><td><code>cfg_min / max / steps</code></td><td>Float / Int</td><td>CFG 扫描。如 3→9 分 4 步 → [3, 5, 7, 9]</td></tr>
+    <tr><td><code>seed</code></td><td>Int</td><td><strong>固定 seed</strong>，所有组合共用。</td></tr>
     <tr><td><code>steps_min / max / count</code></td><td>Int</td><td>采样步数扫描。</td></tr>
   </table>
 
+  <h4>🔧 6 个 LoRA 槽（每槽独立）</h4>
+  <table>
+    <tr><th>槽参数</th><th>类型</th><th>说明</th></tr>
+    <tr><td><code>lora_N_enabled</code></td><td>BOOLEAN</td><td><strong>开关</strong>——ON 才参与扫描。</td></tr>
+    <tr><td><code>lora_N_name</code></td><td>下拉</td><td><strong>自动列出</strong> <code>ComfyUI/models/loras/</code> 下所有文件。</td></tr>
+    <tr><td><code>lora_N_weight_min / max / steps</code></td><td>Float / Int</td><td>权重扫描范围。如 0.30→1.00 ×3 → [0.3, 0.65, 1.0]</td></tr>
+  </table>
+
   <div class="tip">
-    <strong>💡 多 LoRA 示例：</strong><br>
-    <code>anima线稿画风.safetensors 0.3 1.0 3</code> → 权重 [0.3, 0.65, 1.0]<br>
-    <code>anima美学增强.safetensors 0.5 1.5 2</code> → 权重 [0.5, 1.5]<br>
-    组合数：3 × 2 × CFG数 × Steps数 = 总出图数
+    <strong>💡 示例：</strong>开 LoRA #1 动画画风 0.3→1.0 ×3，开 LoRA #2 美学增强 0.5→1.5 ×2<br>
+    LoRA 组合 = 3×2 = 6，配 4 CFG × 2 Steps = <strong>48 张</strong>
   </div>
 </div>
 
