@@ -1,0 +1,11 @@
+# ComfyUI Batch Debug Plugin - Dependencies
+# 批量调试出图插件 - 依赖
+
+# All core dependencies are already included in ComfyUI:
+# - torch, numpy, PIL (Pillow) - image processing
+# - folder_paths, comfy.sd, comfy.utils, comfy.samplers - ComfyUI internals
+# - json, csv, os, itertools, math, re, time - Python stdlib
+
+# No extra pip packages required for basic operation.
+# Optional: install a CJK font for Chinese label rendering in grids
+# (the plugin auto-detects available system fonts).

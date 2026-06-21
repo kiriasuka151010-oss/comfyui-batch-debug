@@ -1,0 +1,389 @@
+{
+  "last_node_id": 25,
+  "last_link_id": 50,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "AnimaDexBrowser",
+      "pos": [100, 100],
+      "size": [600, 900],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {"name": "tag", "type": "STRING", "links": [1]}
+      ],
+      "properties": {"Node name for S&R": "AnimaDexBrowser"},
+      "widgets_values": ["piromizu", ""],
+      "color": "#223",
+      "bgcolor": "#335"
+    },
+    {
+      "id": 2,
+      "type": "DanbooruBrowser",
+      "pos": [750, 100],
+      "size": [1100, 1600],
+      "flags": {"collapsed": false},
+      "order": 1,
+      "mode": 0,
+      "inputs": [
+        {"name": "来自AnimaDex", "shape": 7, "type": "STRING", "link": 1}
+      ],
+      "outputs": [
+        {"name": "image", "type": "IMAGE", "links": [2]},
+        {"name": "全部标签", "type": "STRING", "links": []},
+        {"name": "质量/元标签", "type": "STRING", "links": []},
+        {"name": "数量标签", "type": "STRING", "links": [3]},
+        {"name": "角色标签", "type": "STRING", "links": [4]},
+        {"name": "系列标签", "type": "STRING", "links": [5]},
+        {"name": "画师标签", "type": "STRING", "links": [6]},
+        {"name": "常规标签", "type": "STRING", "links": [7]},
+        {"name": "未分类标签", "type": "STRING", "links": null}
+      ],
+      "properties": {"Node name for S&R": "DanbooruBrowser"},
+      "widgets_values": [
+        "{\"post_id\":3660232,\"image_connected\":true}",
+        "{\"all\":false,\"ratings\":[\"explicit\"]}",
+        "{\"multi_select_enabled\":false,\"multi_merge_all\":true,\"multi_merge_quality_meta\":true,\"multi_merge_count\":true,\"multi_merge_character\":true,\"multi_merge_series\":true,\"multi_merge_artist\":true,\"multi_merge_general\":true,\"original_resolution\":false,\"tag_fusion_enabled\":false}",
+        "", "", ""
+      ],
+      "color": "#223",
+      "bgcolor": "#335"
+    },
+    {
+      "id": 3,
+      "type": "PreviewImage",
+      "pos": [1900, 100],
+      "size": [500, 700],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {"name": "images", "type": "IMAGE", "link": 2}
+      ],
+      "outputs": [],
+      "properties": {"Node name for S&R": "PreviewImage"},
+      "widgets_values": [],
+      "title": "D站参考图"
+    },
+    {
+      "id": 4,
+      "type": "PreviewAny",
+      "pos": [2000, 100],
+      "size": [210, 112],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {"name": "source", "type": "*", "link": 4}
+      ],
+      "outputs": [
+        {"name": "STRING", "type": "STRING", "links": [8]}
+      ],
+      "title": "角色",
+      "properties": {"Node name for S&R": "PreviewAny"},
+      "color": "#332922", "bgcolor": "#593930"
+    },
+    {
+      "id": 5,
+      "type": "PreviewAny",
+      "pos": [2000, 250],
+      "size": [210, 112],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {"name": "source", "type": "*", "link": 5}
+      ],
+      "outputs": [
+        {"name": "STRING", "type": "STRING", "links": [9]}
+      ],
+      "title": "系列",
+      "properties": {"Node name for S&R": "PreviewAny"},
+      "color": "#223", "bgcolor": "#335"
+    },
+    {
+      "id": 6,
+      "type": "PreviewAny",
+      "pos": [2000, 400],
+      "size": [210, 112],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {"name": "source", "type": "*", "link": 6}
+      ],
+      "outputs": [
+        {"name": "STRING", "type": "STRING", "links": [10]}
+      ],
+      "title": "画师",
+      "properties": {"Node name for S&R": "PreviewAny"},
+      "color": "#232", "bgcolor": "#353"
+    },
+    {
+      "id": 7,
+      "type": "PreviewAny",
+      "pos": [2000, 550],
+      "size": [300, 112],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {"name": "source", "type": "*", "link": 7}
+      ],
+      "outputs": [
+        {"name": "STRING", "type": "STRING", "links": [11]}
+      ],
+      "title": "常规",
+      "properties": {"Node name for S&R": "PreviewAny"}
+    },
+    {
+      "id": 8,
+      "type": "AnimaPromptConverter",
+      "pos": [2300, 100],
+      "size": [400, 350],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {"name": "count_tags", "type": "STRING", "link": 3},
+        {"name": "character_tags", "type": "STRING", "link": 8},
+        {"name": "series_tags", "type": "STRING", "link": 9},
+        {"name": "artist_tags", "type": "STRING", "link": 10},
+        {"name": "general_tags", "type": "STRING", "link": 11}
+      ],
+      "outputs": [
+        {"name": "prompt", "type": "STRING", "links": [12]}
+      ],
+      "properties": {"Node name for S&R": "AnimaPromptConverter"},
+      "widgets_values": [
+        "masterpiece, best quality, score_9, year 2025, highres, official art, sensitive,",
+        "", "", "", "", "",
+        "Anima", "转空格", true, true, ", "
+      ],
+      "color": "#223", "bgcolor": "#335"
+    },
+    {
+      "id": 9,
+      "type": "PreviewAny",
+      "pos": [2750, 100],
+      "size": [500, 200],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {"name": "source", "type": "*", "link": 12}
+      ],
+      "outputs": [
+        {"name": "STRING", "type": "STRING", "links": [13]}
+      ],
+      "properties": {"Node name for S&R": "PreviewAny"},
+      "title": "完整 Prompt (预览)"
+    },
+    {
+      "id": 10,
+      "type": "CLIPTextEncode",
+      "pos": [3300, 100],
+      "size": [400, 200],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {"name": "clip", "type": "CLIP", "link": 20},
+        {"name": "text", "type": "STRING", "link": 13}
+      ],
+      "outputs": [
+        {"name": "CONDITIONING", "type": "CONDITIONING", "links": [21]}
+      ],
+      "properties": {"Node name for S&R": "CLIPTextEncode"},
+      "widgets_values": [""],
+      "title": "⭕ 正面 (D站 Tag)"
+    },
+    {
+      "id": 11,
+      "type": "CLIPTextEncode",
+      "pos": [3300, 350],
+      "size": [400, 200],
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "inputs": [
+        {"name": "clip", "type": "CLIP", "link": 20}
+      ],
+      "outputs": [
+        {"name": "CONDITIONING", "type": "CONDITIONING", "links": [22]}
+      ],
+      "properties": {"Node name for S&R": "CLIPTextEncode"},
+      "widgets_values": ["worst quality, low quality, blurry, jpeg artifacts, text, watermark"],
+      "title": "⭕ 负面"
+    },
+    {
+      "id": 12,
+      "type": "UNETLoader",
+      "pos": [2700, 700],
+      "size": [270, 82],
+      "flags": {},
+      "order": 11,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {"name": "MODEL", "type": "MODEL", "links": [14]}
+      ],
+      "properties": {"Node name for S&R": "UNETLoader"},
+      "widgets_values": ["anima_baseV10.safetensors", "default"]
+    },
+    {
+      "id": 13,
+      "type": "CLIPLoader",
+      "pos": [2700, 830],
+      "size": [270, 106],
+      "flags": {},
+      "order": 12,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {"name": "CLIP", "type": "CLIP", "links": [20]}
+      ],
+      "properties": {"Node name for S&R": "CLIPLoader"},
+      "widgets_values": ["qwen_3_06b_base.safetensors", "stable_diffusion", "default"]
+    },
+    {
+      "id": 14,
+      "type": "VAELoader",
+      "pos": [2700, 980],
+      "size": [270, 58],
+      "flags": {},
+      "order": 13,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {"name": "VAE", "type": "VAE", "links": [15]}
+      ],
+      "properties": {"Node name for S&R": "VAELoader"},
+      "widgets_values": ["qwen_image_vae.safetensors"]
+    },
+    {
+      "id": 15,
+      "type": "EmptyLatentImage",
+      "pos": [2700, 1100],
+      "size": [270, 106],
+      "flags": {},
+      "order": 14,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {"name": "LATENT", "type": "LATENT", "links": [30]}
+      ],
+      "properties": {"Node name for S&R": "EmptyLatentImage"},
+      "widgets_values": [768, 1536, 1]
+    },
+    {
+      "id": 16,
+      "type": "BatchDebugConfig",
+      "pos": [100, 1200],
+      "size": [400, 450],
+      "flags": {},
+      "order": 15,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {"name": "config_json", "type": "STRING", "links": [40]}
+      ],
+      "properties": {"Node name for S&R": "BatchDebugConfig"},
+      "widgets_values": [
+        "",
+        "anima线稿画风但是细节更多.safetensors 0.3 1.0 3\nanima美学增强，高清.safetensors 0.5 1.5 2",
+        1.0,
+        3.0, 9.0, 4,
+        42,
+        20, 30, 2
+      ]
+    },
+    {
+      "id": 17,
+      "type": "BatchDebugExecute",
+      "pos": [3800, 100],
+      "size": [340, 300],
+      "flags": {},
+      "order": 16,
+      "mode": 0,
+      "inputs": [
+        {"name": "model", "type": "MODEL", "link": 14},
+        {"name": "clip", "type": "CLIP", "link": 20},
+        {"name": "vae", "type": "VAE", "link": 15},
+        {"name": "positive", "type": "CONDITIONING", "link": 21},
+        {"name": "negative", "type": "CONDITIONING", "link": 22},
+        {"name": "latent_image", "type": "LATENT", "link": 30},
+        {"name": "config_json", "type": "STRING", "link": 40}
+      ],
+      "outputs": [
+        {"name": "images", "type": "IMAGE", "links": [41]},
+        {"name": "metadata_json", "type": "STRING", "links": [42]}
+      ],
+      "properties": {"Node name for S&R": "BatchDebugExecute"},
+      "widgets_values": ["conditioning", "euler", "normal", 1.0]
+    },
+    {
+      "id": 18,
+      "type": "BatchDebugGridSave",
+      "pos": [4300, 100],
+      "size": [340, 400],
+      "flags": {},
+      "order": 17,
+      "mode": 0,
+      "inputs": [
+        {"name": "images", "type": "IMAGE", "link": 41},
+        {"name": "metadata_json", "type": "STRING", "link": 42}
+      ],
+      "outputs": [],
+      "properties": {"Node name for S&R": "BatchDebugGridSave"},
+      "widgets_values": [
+        4, 256, 4096, 16,
+        "C:{cfg:.1f} L:{lora_info}",
+        "batch_debug/d站_loRA对比",
+        true, true, true
+      ]
+    }
+  ],
+  "links": [
+    [1, 1, 0, 2, 0, "STRING"],
+    [2, 2, 0, 3, 0, "IMAGE"],
+    [3, 2, 3, 8, 0, "STRING"],
+    [4, 2, 4, 4, 0, "STRING"],
+    [5, 2, 5, 5, 0, "STRING"],
+    [6, 2, 6, 6, 0, "STRING"],
+    [7, 2, 7, 7, 0, "STRING"],
+    [8, 4, 0, 8, 1, "STRING"],
+    [9, 5, 0, 8, 2, "STRING"],
+    [10, 6, 0, 8, 3, "STRING"],
+    [11, 7, 0, 8, 4, "STRING"],
+    [12, 8, 0, 9, 0, "STRING"],
+    [13, 9, 0, 10, 1, "STRING"],
+    [14, 12, 0, 17, 0, "MODEL"],
+    [15, 14, 0, 17, 2, "VAE"],
+    [20, 13, 0, 10, 0, "CLIP"],
+    [20, 13, 0, 11, 0, "CLIP"],
+    [20, 13, 0, 17, 1, "CLIP"],
+    [21, 10, 0, 17, 3, "CONDITIONING"],
+    [22, 11, 0, 17, 4, "CONDITIONING"],
+    [30, 15, 0, 17, 5, "LATENT"],
+    [40, 16, 0, 17, 6, "STRING"],
+    [41, 17, 0, 18, 0, "IMAGE"],
+    [42, 17, 1, 18, 1, "STRING"]
+  ],
+  "groups": [
+    {
+      "id": 1,
+      "title": "D站 Pipeline (不动 → 改Config参数)",
+      "bounding": [80, 60, 3400, 1300],
+      "color": "#3f789e",
+      "font_size": 24
+    }
+  ],
+  "config": {},
+  "extra": {
+    "ds": {"scale": 0.5, "offset": [100, 100]}
+  },
+  "version": 0.4
+}
