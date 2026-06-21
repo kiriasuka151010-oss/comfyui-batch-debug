@@ -12,10 +12,10 @@ h1{font-size:1.2rem;color:#fff;margin-bottom:4px}
 .meta{color:var(--mu);font-size:.8rem;margin-bottom:12px}
 .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;padding:10px;background:var(--srf);border:1px solid var(--bdr);border-radius:6px}
 .toolbar label{font-size:.78rem;color:var(--mu)}
-.toolbar select,.toolbar button{padding:4px 8px;border-radius:4px;border:1px solid var(--bdr);background:var(--bg);color:var(--tx);font-size:.8rem;cursor:pointer}
+.toolbar select,.toolbar button,.toolbar input{padding:4px 8px;border-radius:4px;border:1px solid var(--bdr);background:var(--bg);color:var(--tx);font-size:.8rem;cursor:pointer}
 .toolbar button.primary{background:var(--ac);color:#fff;border-color:var(--ac)}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:4px}
-.card{background:var(--srf);border:1px solid var(--bdr);border-radius:4px;overflow:hidden;cursor:pointer;transition:border-color .15s}
+.card{background:var(--srf);border:1px solid var(--bdr);border-radius:4px;overflow:hidden;cursor:pointer;transition:border-color .15s;position:relative}
 .card:hover{border-color:var(--ac)}
 .card img{width:100%;display:block;aspect-ratio:3/4;object-fit:cover}
 .card .info{padding:4px 6px;font-size:.72rem;color:var(--mu);display:flex;justify-content:space-between;flex-wrap:wrap}
@@ -26,16 +26,18 @@ h1{font-size:1.2rem;color:#fff;margin-bottom:4px}
 .card.picked{border-color:var(--gr);border-width:2px}
 .card .idx{position:absolute;top:2px;left:4px;font-size:.65rem;background:#0008;color:#fff;padding:1px 4px;border-radius:3px;pointer-events:none}
 .empty{grid-column:1/-1;text-align:center;padding:40px;color:var(--mu)}
-.empty code{background:var(--bg);padding:4px 8px;border-radius:4px}
-#drop{position:fixed;inset:0;background:#000a;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.5rem;z-index:999;pointer-events:none;opacity:0;transition:opacity .2s}
-#drop.show{opacity:1}
+#drop{position:fixed;inset:0;background:#000c;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.5rem;z-index:999;flex-direction:column;text-align:center;line-height:2}
+#drop small{font-size:.9rem;color:var(--mu)}
 .stats{display:flex;gap:16px;font-size:.78rem;color:var(--mu);margin-bottom:8px}
 .stats b{color:var(--tx)}
 </style>
 </head>
 <body>
 
-<div id="drop">📂 拖入 report.json</div>
+<div id="drop">
+  📂 <b>拖入 report.json</b>
+  <small>浏览器限制，请从 sweep 文件夹拖入</small>
+</div>
 
 <div id="app" style="display:none">
   <h1>🔬 Batch Debug Viewer</h1>
@@ -45,11 +47,11 @@ h1{font-size:1.2rem;color:#fff;margin-bottom:4px}
     <label>CFG <select id="f_cfg"><option value="">全部</option></select></label>
     <label>Steps <select id="f_steps"><option value="">全部</option></select></label>
     <label>LoRA <select id="f_lora"><option value="">全部</option></select></label>
-    <label>搜索 <input id="f_search" placeholder="关键词..." style="width:100px"></label>
+    <label>搜索 <input id="f_search" placeholder="关键词..."></label>
     <label>排序 <select id="f_sort"><option value="index">序号</option><option value="cfg">CFG</option><option value="steps">Steps</option><option value="score">评分↓</option></select></label>
     <button class="primary" onclick="exportCSV()">📥 导出评分CSV</button>
     <button onclick="resetScores()">🔄 清空评分</button>
-    <span style="margin-left:auto;font-size:.75rem;color:var(--mu)" id="tip">💡 鼠标悬停卡片点击⭐打分 · 双击图片放大</span>
+    <span style="margin-left:auto;font-size:.75rem;color:var(--mu)">💡 点击⭐打分 · 双击图片放大</span>
   </div>
   <div class="grid" id="grid"></div>
 </div>
@@ -61,136 +63,103 @@ h1{font-size:1.2rem;color:#fff;margin-bottom:4px}
 <script>
 let data = null;
 let scores = {};
-let folderBase = '';
 
-// ── Load report.json ──
+// Load from drag or fetch
 async function loadReport(file) {
   try {
     let json;
     if (file) {
       json = JSON.parse(await file.text());
-      if (file.webkitRelativePath) folderBase = '';
-      else folderBase = '';
     } else {
       const r = await fetch('report.json');
+      if (!r.ok) throw new Error('HTTP '+r.status);
       json = await r.json();
     }
     data = json;
-    scores = JSON.parse(localStorage.getItem('bd_scores_' + data.sweep_id) || '{}');
-    folderBase = file ? '' : '';
+    scores = JSON.parse(localStorage.getItem('bd_scores_'+data.sweep_id)||'{}');
     initUI();
   } catch(e) {
-    document.getElementById('drop').innerHTML = '❌ 加载失败: ' + e.message + '<br><small>请确保 report.json 与此 viewer 在同一目录</small>';
-    document.getElementById('drop').classList.add('show');
+    document.getElementById('drop').style.display = 'flex';
   }
 }
 
-// ── Init filters & grid ──
 function initUI() {
   document.getElementById('app').style.display = 'block';
-  document.getElementById('drop').classList.remove('show');
+  document.getElementById('drop').style.display = 'none';
   document.getElementById('meta').textContent =
     `扫描 ${data.sweep_id} · ${data.total} 张 · sampler=${data.sampler} · scheduler=${data.scheduler} · seed=${data.seed}`;
-
-  // Populate filters
-  const cfgs = [...new Set(data.images.map(i=>i.cfg))].sort((a,b)=>a-b);
-  const steps = [...new Set(data.images.map(i=>i.steps))].sort((a,b)=>a-b);
-  const loras = [...new Set(data.images.map(i=>i.lora_info))].filter(Boolean).sort();
-  fillSelect('f_cfg', cfgs);
-  fillSelect('f_steps', steps);
-  fillSelect('f_lora', loras);
-
+  ['f_cfg','f_steps','f_lora'].forEach(id=>document.getElementById(id).innerHTML='<option value="">全部</option>');
+  const cfgs=[...new Set(data.images.map(i=>i.cfg))].sort((a,b)=>a-b);
+  const steps=[...new Set(data.images.map(i=>i.steps))].sort((a,b)=>a-b);
+  const loras=[...new Set(data.images.map(i=>i.lora_info))].filter(Boolean).sort();
+  fillSelect('f_cfg',cfgs);fillSelect('f_steps',steps);fillSelect('f_lora',loras);
   renderGrid();
 }
 
-function fillSelect(id, vals) {
-  const s = document.getElementById(id);
-  vals.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;s.appendChild(o)});
-}
+function fillSelect(id,vals){const s=document.getElementById(id);vals.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;s.appendChild(o)})}
 
-// ── Scoring ──
-function rate(imgIdx, star) {
-  const key = data.images[imgIdx].file;
-  const cur = scores[key] || 0;
-  scores[key] = (cur === star) ? 0 : star; // toggle
-  localStorage.setItem('bd_scores_' + data.sweep_id, JSON.stringify(scores));
+function rate(imgIdx,star){
+  const key=data.images[imgIdx].file,cur=scores[key]||0;
+  scores[key]=(cur===star)?0:star;
+  localStorage.setItem('bd_scores_'+data.sweep_id,JSON.stringify(scores));
   renderGrid();
 }
+function resetScores(){scores={};localStorage.removeItem('bd_scores_'+data.sweep_id);renderGrid()}
 
-function resetScores() { scores={}; localStorage.removeItem('bd_scores_'+data.sweep_id); renderGrid(); }
-
-// ── Render ──
-function renderGrid() {
-  const grid = document.getElementById('grid');
-  const f_cfg = document.getElementById('f_cfg').value;
-  const f_steps = document.getElementById('f_steps').value;
-  const f_lora = document.getElementById('f_lora').value;
-  const f_search = document.getElementById('f_search').value.toLowerCase();
-  const f_sort = document.getElementById('f_sort').value;
-
-  let filtered = data.images.map((img,i)=>({...img,_idx:i}));
-  if(f_cfg) filtered = filtered.filter(i=>String(i.cfg)===f_cfg);
-  if(f_steps) filtered = filtered.filter(i=>String(i.steps)===f_steps);
-  if(f_lora) filtered = filtered.filter(i=>i.lora_info===f_lora);
-  if(f_search) filtered = filtered.filter(i=>i.lora_info.toLowerCase().includes(f_search)||i.file.includes(f_search));
-
-  if(f_sort==='cfg') filtered.sort((a,b)=>a.cfg-b.cfg);
-  else if(f_sort==='steps') filtered.sort((a,b)=>a.steps-b.steps);
-  else if(f_sort==='score') filtered.sort((a,b)=>(scores[b.file]||0)-(scores[a.file]||0));
-  else filtered.sort((a,b)=>a._idx-b._idx);
-
-  document.getElementById('stats').innerHTML =
-    `<span>显示 <b>${filtered.length}</b>/${data.total}</span><span>已评分 <b>${Object.values(scores).filter(v=>v>0).length}</b></span>`;
-
-  grid.innerHTML = filtered.length ? filtered.map(img=>{
-    const sc = scores[img.file]||0;
-    const stars = [1,2,3,4,5].map(s=>
-      `<span class="${s<=sc?'on':''}" onclick="event.stopPropagation();rate(${img._idx},${s})">★</span>`
-    ).join('');
-    return `<div class="card${sc>0?' picked':''}" style="position:relative" ondblclick="showLightbox('${img.file}')">
+function renderGrid(){
+  const grid=document.getElementById('grid');
+  const fc=document.getElementById('f_cfg').value,fs=document.getElementById('f_steps').value;
+  const fl=document.getElementById('f_lora').value,fq=document.getElementById('f_search').value.toLowerCase();
+  const sort=document.getElementById('f_sort').value;
+  let f=data.images.map((img,i)=>({...img,_idx:i}));
+  if(fc) f=f.filter(i=>String(i.cfg)===fc);
+  if(fs) f=f.filter(i=>String(i.steps)===fs);
+  if(fl) f=f.filter(i=>i.lora_info===fl);
+  if(fq) f=f.filter(i=>i.lora_info.toLowerCase().includes(fq)||i.file.includes(fq));
+  if(sort==='cfg') f.sort((a,b)=>a.cfg-b.cfg);
+  else if(sort==='steps') f.sort((a,b)=>a.steps-b.steps);
+  else if(sort==='score') f.sort((a,b)=>(scores[b.file]||0)-(scores[a.file]||0));
+  else f.sort((a,b)=>a._idx-b._idx);
+  document.getElementById('stats').innerHTML=`<span>显示 <b>${f.length}</b>/${data.total}</span><span>已评分 <b>${Object.values(scores).filter(v=>v>0).length}</b></span>`;
+  grid.innerHTML=f.length?f.map(img=>{
+    const sc=scores[img.file]||0;
+    const stars=[1,2,3,4,5].map(s=>`<span class="${s<=sc?'on':''}" onclick="event.stopPropagation();rate(${img._idx},${s})">★</span>`).join('');
+    return `<div class="card${sc>0?' picked':''}" ondblclick="showLightbox('${img.file}')">
       <div class="idx">#${img._idx}</div>
-      <img src="${img.file}" loading="lazy" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22267%22><rect fill=%22%23333%22 width=%22200%22 height=%22267%22/><text fill=%22%23888%22 x=%22100%22 y=%22134%22 text-anchor=%22middle%22>?'+img.file+'?</text></svg>'">
+      <img src="${img.file}" loading="lazy" onerror="this.style.background='#222'">
       <div class="info"><span>${img.lora_info||'-'}</span><span>cfg ${img.cfg}</span><span>st ${img.steps}</span></div>
       <div class="score">${stars}</div>
     </div>`;
-  }).join('') : '<div class="empty">没有匹配结果</div>';
+  }).join(''):'<div class="empty">没有匹配结果</div>';
 }
 
-// ── Lightbox ──
-function showLightbox(file) {
-  document.getElementById('lb_img').src = file;
-  document.getElementById('lightbox').style.display = 'flex';
-}
+function showLightbox(file){document.getElementById('lb_img').src=file;document.getElementById('lightbox').style.display='flex'}
 document.getElementById('lightbox').addEventListener('click',function(e){if(e.target===this)this.style.display='none'});
 
-// ── Export CSV with scores ──
-function exportCSV() {
-  const rows = [['index','file','lora_info','cfg','steps','score']];
-  data.images.forEach((img,i)=>{
-    rows.push([i,img.file,img.lora_info,img.cfg,img.steps,scores[img.file]||0]);
-  });
-  const csv = rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
-  const blob = new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'});
-  const a = document.createElement('a');a.href=URL.createObjectURL(blob);a.download='scores_'+data.sweep_id+'.csv';a.click();
+function exportCSV(){
+  const rows=[['index','file','lora_info','cfg','steps','score']];
+  data.images.forEach((img,i)=>rows.push([i,img.file,img.lora_info,img.cfg,img.steps,scores[img.file]||0]));
+  const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='scores_'+data.sweep_id+'.csv';a.click();
 }
 
-// ── Drag & drop ──
-const drop = document.getElementById('drop');
-document.addEventListener('dragover',e=>{e.preventDefault();drop.classList.add('show')});
-document.addEventListener('dragleave',()=>drop.classList.remove('show'));
+// Drag & drop
+const drop=document.getElementById('drop');
+document.addEventListener('dragover',e=>{e.preventDefault()});
 document.addEventListener('drop',e=>{
-  e.preventDefault();drop.classList.remove('show');
-  const f = e.dataTransfer.files[0];
+  e.preventDefault();
+  const f=e.dataTransfer.files[0];
   if(f&&f.name.endsWith('.json')) loadReport(f);
 });
 
-// ── Filter change → re-render ──
+// Filter live
 ['f_cfg','f_steps','f_lora','f_search','f_sort'].forEach(id=>
   document.getElementById(id).addEventListener(id==='f_search'?'input':'change',renderGrid)
 );
 
-// ── Auto-load ──
-if(!data) loadReport();
+// Auto-try fetch on load
+setTimeout(()=>{if(!data)loadReport()},100);
 </script>
 </body>
 </html>
