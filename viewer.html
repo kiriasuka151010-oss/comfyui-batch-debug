@@ -7,7 +7,8 @@
 <style>
 :root{--bg:#0d1117;--srf:#161b22;--bdr:#30363d;--tx:#c9d1d9;--mu:#8b949e;--ac:#58a6ff;--gr:#3fb950;--or:#d2991d;--rd:#f85149}
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:var(--bg);color:var(--tx);font-family:-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;padding:16px;min-height:100vh}
+body{background:var(--bg);color:var(--tx);font-family:-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;padding:16px;min-height:100vh;position:relative}
+body::before{content:'';position:fixed;inset:0;background-size:cover;background-position:center;filter:blur(40px) brightness(.15);z-index:-1;transition:background-image .5s}
 h1{font-size:1.2rem;color:#fff;margin-bottom:4px}
 .meta{color:var(--mu);font-size:.8rem;margin-bottom:12px}
 .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;padding:10px;background:var(--srf);border:1px solid var(--bdr);border-radius:6px}
@@ -86,6 +87,12 @@ async function loadReport(file) {
 function initUI() {
   document.getElementById('app').style.display = 'block';
   document.getElementById('drop').style.display = 'none';
+  // Use first sweep image as blurred background
+  if(data.images&&data.images[0]){
+    const bg=new Image();bg.onload=()=>document.body.style.setProperty('--bg-img',`url(${data.images[0].file})`);
+    bg.src=data.images[0].file;
+    document.body.style.backgroundImage=`url(${data.images[0].file})`;
+  }
   document.getElementById('meta').textContent =
     `扫描 ${data.sweep_id} · ${data.total} 张 · sampler=${data.sampler} · scheduler=${data.scheduler} · seed=${data.seed}`;
   ['f_cfg','f_steps','f_lora'].forEach(id=>document.getElementById(id).innerHTML='<option value="">全部</option>');
