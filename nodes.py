@@ -562,39 +562,30 @@ class BatchDebugGridSave:
             while len(metadata_records) < n:
                 metadata_records.append({"index": len(metadata_records)})
 
-        # --- Get save path ---
+        # --- Get save path + create sweep folder ---
+        from datetime import datetime
+        sweep_ts = datetime.now().strftime("%Y%m%d_%H%M%S")
         full_output_folder, filename_base, counter, subfolder, filename_prefix = \
             folder_paths.get_save_image_path(
                 filename_prefix, self.output_dir,
                 images[0].shape[1], images[0].shape[0]
             )
+        # Create dedicated sweep subfolder
+        sweep_folder = os.path.join(full_output_folder, f"sweep_{sweep_ts}")
+        os.makedirs(sweep_folder, exist_ok=True)
+        sweep_subfolder = os.path.join(subfolder, f"sweep_{sweep_ts}") if subfolder else f"sweep_{sweep_ts}"
 
         results = []
 
         # --- 1. Save individual images ---
         if save_individual:
             for i in range(n):
-                img_tensor = images[i]  # [H, W, C]
+                img_tensor = images[i]
                 pil_img = tensor_to_pil(img_tensor)
 
-                # Build parameter-rich filename
                 meta = metadata_records[i] if i < len(metadata_records) else {}
-                prompt_short = sanitize_filename(
-                    str(meta.get("prompt", "unknown"))[:20], max_len=20
-                )
-                lora_info = meta.get("lora_info", "none")
-                lora_short = sanitize_filename(lora_info, max_len=40)
-                cfg_v = meta.get("cfg", 0.0)
-                steps_v = meta.get("steps", 0)
+                img_fname = f"img_{i:04d}.png"
 
-                fname = (
-                    f"{lora_short}_"
-                    f"cfg{cfg_v:.1f}_"
-                    f"steps{steps_v}_"
-                    f"{counter:05d}.png"
-                )
-
-                # Embed metadata in PNG
                 pnginfo = PngInfo()
                 pnginfo.add_text("batch_debug_params", json.dumps(meta, ensure_ascii=False))
                 if prompt is not None:
@@ -603,23 +594,20 @@ class BatchDebugGridSave:
                     for k, v in extra_pnginfo.items():
                         pnginfo.add_text(k, json.dumps(v, ensure_ascii=False))
 
-                filepath = os.path.join(full_output_folder, fname)
+                filepath = os.path.join(sweep_folder, img_fname)
                 pil_img.save(filepath, pnginfo=pnginfo, compress_level=self.compress_level)
 
-                # Record the filename in metadata for CSV
                 if i < len(metadata_records):
-                    metadata_records[i]["filename"] = fname
+                    metadata_records[i]["filename"] = img_fname
 
                 results.append({
-                    "filename": fname,
-                    "subfolder": subfolder,
+                    "filename": img_fname,
+                    "subfolder": sweep_subfolder,
                     "type": self.type,
                 })
-                counter += 1
 
         # --- 2. Save labeled grid ---
         if save_grid:
-            # Build labels from metadata
             labels = []
             for i in range(n):
                 meta = metadata_records[i] if i < len(metadata_records) else {}
@@ -634,36 +622,61 @@ class BatchDebugGridSave:
                 font_size=label_font_size,
             )
 
-            grid_fname = f"grid_{counter:05d}.png"
-            grid_path = os.path.join(full_output_folder, grid_fname)
-
-            # Embed sweep summary in grid PNG
-            grid_pnginfo = PngInfo()
-            grid_pnginfo.add_text("batch_debug_sweep_info",
-                                  json.dumps({
-                                      "total_images": n,
-                                      "columns": columns,
-                                      "label_format": label_format,
-                                  }, ensure_ascii=False))
-            grid_pil.save(grid_path, pnginfo=grid_pnginfo, compress_level=self.compress_level)
+            grid_fname = "grid.png"
+            grid_path = os.path.join(sweep_folder, grid_fname)
+            grid_pil.save(grid_path, compress_level=self.compress_level)
 
             results.append({
                 "filename": grid_fname,
-                "subfolder": subfolder,
+                "subfolder": sweep_subfolder,
                 "type": self.type,
             })
-            counter += 1
-            print(f"[BatchDebug] Grid saved: {grid_fname}")
+            print(f"[BatchDebug] Grid saved: {sweep_subfolder}/{grid_fname}")
 
         # --- 3. Export CSV ---
         if save_metadata_csv and metadata_records:
-            csv_fname = f"metadata_{counter:05d}.csv"
-            csv_path = os.path.join(full_output_folder, csv_fname)
+            csv_fname = "metadata.csv"
+            csv_path = os.path.join(sweep_folder, csv_fname)
             write_metadata_csv(csv_path, metadata_records)
-            print(f"[BatchDebug] Metadata CSV saved: {csv_fname}")
+            print(f"[BatchDebug] CSV saved: {sweep_subfolder}/{csv_fname}")
+
+        # --- 4. Export report.json for viewer.html ---
+        if save_metadata_csv and metadata_records:
+            report = {
+                "sweep_id": sweep_ts,
+                "total": n,
+                "sampler": metadata_records[0].get("sampler", "") if metadata_records else "",
+                "scheduler": metadata_records[0].get("scheduler", "") if metadata_records else "",
+                "seed": metadata_records[0].get("seed", 0) if metadata_records else 0,
+                "images": [
+                    {
+                        "file": m.get("filename", ""),
+                        "lora_info": m.get("lora_info", ""),
+                        "cfg": m.get("cfg", 0),
+                        "steps": m.get("steps", 0),
+                        "seed": m.get("seed", 0),
+                        "prompt": m.get("prompt", "")[:80],
+                    }
+                    for m in metadata_records
+                ],
+            }
+            report_path = os.path.join(sweep_folder, "report.json")
+            with open(report_path, "w", encoding="utf-8") as f:
+                json.dump(report, f, ensure_ascii=False, indent=2)
+            print(f"[BatchDebug] Report saved: {sweep_subfolder}/report.json")
+
+            # Auto-copy viewer.html into sweep folder
+            try:
+                viewer_src = os.path.join(os.path.dirname(__file__), "viewer.html")
+                if os.path.exists(viewer_src):
+                    import shutil
+                    shutil.copy(viewer_src, os.path.join(sweep_folder, "viewer.html"))
+                    print(f"[BatchDebug] Viewer copied: {sweep_subfolder}/viewer.html")
+            except Exception:
+                pass  # best-effort
 
         # --- Summary ---
         total_saved = len(results)
-        print(f"[BatchDebug] Output complete: {total_saved} files saved to {full_output_folder}")
+        print(f"[BatchDebug] Output complete: {total_saved} files → {sweep_folder}")
 
         return {"ui": {"images": results}}
