@@ -225,6 +225,17 @@ class BatchDebugExecute:
                     "default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01,
                     "tooltip": "Denoising strength."
                 }),
+                "save_preview": ("BOOLEAN", {
+                    "default": True,
+                    "label_on": "Preview ON",
+                    "label_off": "Preview OFF",
+                    "tooltip": "Save each image immediately to output/preview/ so you can watch progress in real-time."
+                }),
+                "preview_prefix": ("STRING", {
+                    "default": "batch_debug/preview",
+                    "multiline": False,
+                    "tooltip": "Subfolder under ComfyUI/output/ for real-time preview images."
+                }),
             },
             "hidden": {
                 "prompt": "PROMPT",
@@ -245,6 +256,7 @@ class BatchDebugExecute:
 
     def execute_batch(self, model, clip, vae, positive, negative, latent_image,
                       config_json, prompt_source, sampler_name, scheduler, denoise=1.0,
+                      save_preview=True, preview_prefix="batch_debug/preview",
                       prompt=None, extra_pnginfo=None):
         # --- 1. Parse config ---
         try:
@@ -358,6 +370,19 @@ class BatchDebugExecute:
                 if len(pixels.shape) == 5:
                     pixels = pixels.reshape(-1, pixels.shape[-3],
                                            pixels.shape[-2], pixels.shape[-1])
+
+                # --- 3e2. Real-time preview save (before collection) ---
+                if save_preview:
+                    try:
+                        preview_dir = os.path.join(folder_paths.get_output_directory(), preview_prefix)
+                        os.makedirs(preview_dir, exist_ok=True)
+                        preview_tensor = pixels[0] if pixels.dim() == 4 else pixels
+                        preview_arr = (255.0 * preview_tensor.cpu().numpy()).clip(0, 255).astype("uint8")
+                        preview_img = Image.fromarray(preview_arr)
+                        preview_path = os.path.join(preview_dir, f"preview_{idx + 1:04d}.png")
+                        preview_img.save(preview_path)
+                    except Exception:
+                        pass  # Preview is best-effort; don't crash the sweep
 
                 # --- 3f. Collect ---
                 image_tensors.append(pixels.cpu())
