@@ -222,10 +222,12 @@ def build_labeled_grid(image_tensors, labels, columns=4,
             fill=label_bg_color
         )
 
-        # Draw label text
+        # Draw label text — auto-truncate for narrow cells
         actual_font = font
         if actual_font:
-            draw.text((x + 2, y_base + 2), label, fill=text_color, font=actual_font)
+            max_label_chars = max(cell_width // (font_size * 0.6), 4)
+            display_label = label[:int(max_label_chars)] if len(label) > max_label_chars else label
+            draw.text((x + 2, y_base + 2), display_label, fill=text_color, font=actual_font)
 
         # Center image in its cell (handle narrower images)
         img_x = x + (cell_width - pil_img.width) // 2

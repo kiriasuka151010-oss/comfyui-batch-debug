@@ -135,7 +135,9 @@ class BatchDebugConfig:
             w_min = kwargs.get(f"lora_{i}_weight_min", 0.3)
             w_max = kwargs.get(f"lora_{i}_weight_max", 1.0)
             w_steps = kwargs.get(f"lora_{i}_weight_steps", 3)
-            weights = np.linspace(w_min, w_max, max(w_steps, 2)).round(4).tolist()
+            weights = np.linspace(w_min, w_max, max(w_steps, 1)).round(4).tolist()
+            # Deduplicate when min==max (linspace produces identical values)
+            weights = list(dict.fromkeys(weights))
             loras.append({
                 "name": name,
                 "weights": weights,
@@ -149,12 +151,14 @@ class BatchDebugConfig:
         # Build sweeps
         lora_weight_clip = kwargs.get("lora_weight_clip", 1.0)
         cfgs = np.linspace(kwargs.get("cfg_min", 3), kwargs.get("cfg_max", 9),
-                          max(kwargs.get("cfg_steps", 4), 2)).round(2).tolist()
+                          max(kwargs.get("cfg_steps", 4), 1)).round(2).tolist()
+        cfgs = list(dict.fromkeys(cfgs))  # dedup
         seed = int(kwargs.get("seed", 42))
         steps_list = [int(s) for s in np.linspace(
             kwargs.get("steps_min", 20), kwargs.get("steps_max", 30),
-            max(kwargs.get("steps_count", 2), 2)
+            max(kwargs.get("steps_count", 2), 1)
         ).round().astype(int)]
+        steps_list = list(dict.fromkeys(steps_list))  # dedup
 
         config = {
             "prompts": prompt_list,
@@ -324,12 +328,13 @@ class BatchDebugExecute:
                     )
                     lora_idx += 1
 
-                # Build LoRA info string for logging
+                # Build compact LoRA info string
                 lora_info_parts = []
                 for i, lc in enumerate(lora_configs):
                     if lc.get("name") and i < len(lora_weights):
-                        lora_info_parts.append(f"{lc['name'].split('.')[0]}:{lora_weights[i]:.2f}")
-                lora_info = " + ".join(lora_info_parts) if lora_info_parts else "none"
+                        short = lc['name'].replace('.safetensors','').replace('anima','')[:18]
+                        lora_info_parts.append(f"{short}:{lora_weights[i]:.2f}")
+                lora_info = "+".join(lora_info_parts) if lora_info_parts else "none"
 
                 # --- 3b. Encode or reuse conditioning ---
                 if use_conditioning:
@@ -498,9 +503,9 @@ class BatchDebugGridSave:
                     "tooltip": "Font size for cell labels in the grid."
                 }),
                 "label_format": ("STRING", {
-                    "default": "C:{cfg:.1f} L:{lora_info}",
+                    "default": "C:{cfg:.1f}",
                     "multiline": False,
-                    "tooltip": "Format string for grid labels. Keys: prompt, lora_info, cfg, seed, steps, sampler, scheduler, index."
+                    "tooltip": "Grid labels. Keys: lora_info, cfg, steps, seed, sampler, scheduler, index."
                 }),
                 "filename_prefix": ("STRING", {
                     "default": "batch_debug/%date:yyyy-MM-dd%_%time:HH-mm-ss%",
