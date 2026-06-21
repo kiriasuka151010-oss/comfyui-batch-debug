@@ -3,333 +3,205 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ComfyUI Batch Debug — 批量参数扫描插件</title>
+<title>ComfyUI Batch Debug — 批量参数扫描 + 交互评分</title>
 <style>
-  :root {
-    --bg: #0d1117;
-    --surface: #161b22;
-    --border: #30363d;
-    --text: #c9d1d9;
-    --muted: #8b949e;
-    --accent: #58a6ff;
-    --green: #3fb950;
-    --orange: #d2991d;
-    --red: #f85149;
-    --purple: #a371f7;
-  }
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
-    line-height: 1.7;
-    padding: 2rem;
-    max-width: 960px;
-    margin: 0 auto;
-  }
-  h1 {
-    font-size: 2rem;
-    margin-bottom: .25rem;
-    color: #fff;
-  }
-  h2 {
-    font-size: 1.4rem;
-    margin: 2.5rem 0 1rem;
-    padding-bottom: .5rem;
-    border-bottom: 1px solid var(--border);
-    color: #fff;
-  }
-  h3 {
-    font-size: 1.1rem;
-    margin: 1.5rem 0 .5rem;
-    color: var(--accent);
-  }
-  p { margin: .6rem 0; color: var(--text); }
-  .subtitle { color: var(--muted); font-size: .95rem; margin-bottom: 2rem; }
-  .badge {
-    display: inline-block;
-    padding: 2px 8px;
-    border-radius: 4px;
-    font-size: .78rem;
-    font-weight: 600;
-    margin-right: 6px;
-  }
-  .badge-green  { background: #1a3a2a; color: var(--green); }
-  .badge-purple { background: #2a1a3a; color: var(--purple); }
-  .badge-orange { background: #3a2a1a; color: var(--orange); }
-  .card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 1.5rem;
-    margin: 1.2rem 0;
-  }
-  .card h3 { margin-top: 0; }
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 1rem 0;
-    font-size: .9rem;
-  }
-  th, td {
-    text-align: left;
-    padding: 10px 14px;
-    border-bottom: 1px solid var(--border);
-  }
-  th {
-    background: var(--surface);
-    color: var(--muted);
-    font-weight: 600;
-    font-size: .8rem;
-    text-transform: uppercase;
-    letter-spacing: .5px;
-  }
-  td:first-child, th:first-child { width: 160px; }
-  td:nth-child(2) { width: 100px; }
-  code {
-    background: #1c2128;
-    padding: 1px 6px;
-    border-radius: 3px;
-    font-size: .88em;
-    color: var(--orange);
-  }
-  .pipeline {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-    font-family: 'SF Mono', 'Fira Code', monospace;
-    font-size: .85rem;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 1rem;
-    margin: 1rem 0;
-  }
-  .pipeline .node {
-    background: #1c2128;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 6px 12px;
-    white-space: nowrap;
-  }
-  .pipeline .arrow { color: var(--muted); }
-  .pipeline .node.config { border-color: var(--purple); }
-  .pipeline .node.execute { border-color: var(--accent); }
-  .pipeline .node.save { border-color: var(--green); }
-  .tip {
-    background: #1a2a3a;
-    border-left: 3px solid var(--accent);
-    padding: .8rem 1rem;
-    border-radius: 4px;
-    margin: 1rem 0;
-    font-size: .9rem;
-  }
-  .tip strong { color: var(--accent); }
-  .warning {
-    background: #3a2a1a;
-    border-left: 3px solid var(--orange);
-    padding: .8rem 1rem;
-    border-radius: 4px;
-    margin: 1rem 0;
-    font-size: .9rem;
-  }
-  .modes {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-    margin: 1rem 0;
-  }
-  .mode-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 1rem;
-  }
-  .mode-card h4 { margin: 0 0 .5rem; font-size: .95rem; }
-  .mode-card p { font-size: .85rem; color: var(--muted); margin: 0; }
-  .mode-card.active { border-color: var(--green); }
-  hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
-  .footer { text-align: center; color: var(--muted); font-size: .8rem; margin-top: 3rem; }
+  :root{--bg:#0d1117;--surface:#161b22;--border:#30363d;--text:#c9d1d9;--muted:#8b949e;--accent:#58a6ff;--green:#3fb950;--orange:#d2991d;--red:#f85149;--purple:#a371f7}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;line-height:1.7;padding:2rem;max-width:1000px;margin:0 auto}
+  h1{font-size:2rem;margin-bottom:.25rem;color:#fff}
+  h2{font-size:1.4rem;margin:2.5rem 0 1rem;padding-bottom:.5rem;border-bottom:1px solid var(--border);color:#fff}
+  h3{font-size:1.1rem;margin:1.5rem 0 .5rem;color:var(--accent)}
+  h4{font-size:.95rem;margin:1rem 0 .3rem;color:var(--text)}
+  p{margin:.6rem 0;color:var(--text)}
+  .subtitle{color:var(--muted);font-size:.95rem;margin-bottom:2rem}
+  .badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:.78rem;font-weight:600;margin-right:6px}
+  .badge-green{background:#1a3a2a;color:var(--green)}
+  .badge-purple{background:#2a1a3a;color:var(--purple)}
+  .badge-orange{background:#3a2a1a;color:var(--orange)}
+  .badge-red{background:#3a1a1a;color:var(--red)}
+  .hero{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1.5rem;margin:1.5rem 0}
+  .hero h2{margin:0 0 .5rem;border:none}
+  .hero ul{margin-left:1.2rem;color:var(--text);font-size:.92rem}
+  .hero ul li{margin:.3rem 0}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1.5rem;margin:1.2rem 0}
+  .card h3{margin-top:0}
+  table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:.9rem}
+  th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--border)}
+  th{background:var(--surface);color:var(--muted);font-weight:600;font-size:.8rem;text-transform:uppercase;letter-spacing:.5px}
+  code{background:#1c2128;padding:1px 6px;border-radius:3px;font-size:.88em;color:var(--orange)}
+  .pipeline{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-family:'SF Mono','Fira Code',monospace;font-size:.85rem;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1rem 0}
+  .pipeline .node{background:#1c2128;border:1px solid var(--border);border-radius:6px;padding:6px 12px;white-space:nowrap}
+  .pipeline .arrow{color:var(--muted)}
+  .pipeline .node.config{border-color:var(--purple)}
+  .pipeline .node.execute{border-color:var(--accent)}
+  .pipeline .node.save{border-color:var(--green)}
+  .tip{background:#1a2a3a;border-left:3px solid var(--accent);padding:.8rem 1rem;border-radius:4px;margin:1rem 0;font-size:.9rem}
+  .warning{background:#3a2a1a;border-left:3px solid var(--orange);padding:.8rem 1rem;border-radius:4px;margin:1rem 0;font-size:.9rem}
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:1rem 0}
+  .two-col .mode-card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:1rem}
+  .two-col .mode-card h4{margin:0 0 .5rem}
+  .two-col .mode-card p{font-size:.85rem;color:var(--muted);margin:0}
+  .two-col .mode-card.active{border-color:var(--green)}
+  .folder-tree{background:#1c2128;border-radius:6px;padding:1rem;font-family:'SF Mono','Fira Code',monospace;font-size:.8rem;margin:1rem 0;line-height:1.8}
+  .folder-tree .comment{color:var(--muted)}
+  .resume-block{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1.5rem;margin:1.5rem 0}
+  .resume-block pre{background:#1c2128;padding:1rem;border-radius:6px;font-size:.82rem;line-height:1.6;overflow-x:auto}
+  hr{border:none;border-top:1px solid var(--border);margin:2rem 0}
+  .footer{text-align:center;color:var(--muted);font-size:.8rem;margin-top:3rem}
 </style>
 </head>
 <body>
 
 <h1>🔬 ComfyUI Batch Debug</h1>
-<p class="subtitle">批量参数扫描 · 多 LoRA 链式扫描 · 对比网格 · CSV 元数据</p>
-
+<p class="subtitle">批量参数扫描 · 多 LoRA 链式扫描 · 交互评分查看器</p>
 <div>
-  <span class="badge badge-green">v2.0</span>
-  <span class="badge badge-purple">多 LoRA</span>
+  <span class="badge badge-green">v2.1</span>
+  <span class="badge badge-purple">6 槽 LoRA</span>
   <span class="badge badge-orange">D站 Pipeline</span>
+  <span class="badge badge-red">HTML Viewer</span>
 </div>
 
 <!-- ─────────────────────────────────────────── -->
-<h2>一、概览</h2>
+<div class="hero">
+  <h2>一句话说清楚</h2>
+  <ul>
+    <li><strong>做什么：</strong>把 AI 绘图调参从"手动改→点 Queue→记笔记"变成"配置一次→批量扫描→HTML 打分筛选"</li>
+    <li><strong>解决什么：</strong>LoRA 该用多大权重？CFG 调到几效果好？不再靠猜，用数据说话</li>
+    <li><strong>怎么用：</strong>D站选参考图 → 配 LoRA 权重范围 → 点 Queue → 打开 viewer 打分</li>
+  </ul>
+</div>
 
-<p>当你需要回答这些问题时，这个插件就是答案：</p>
-<ul style="margin-left:1.5rem;color:var(--text);">
-  <li>"CFG 调到几最好看？"</li>
-  <li>"这个 LoRA 权重 0.4 和 0.8 差多少？"</li>
-  <li>"同一个 prompt，不同 seed 有几张能用的？"</li>
-  <li>"Steps 从 20 到 40，画质提升值不值得等？"</li>
-</ul>
-
-<p>三个节点，笛卡尔积扫描所有参数组合，自动出图 + 网格对比 + CSV 元数据，省去你手动改参数点 Queue 的重复劳动。</p>
+<!-- ─────────────────────────────────────────── -->
+<h2>一、工作流程</h2>
 
 <div class="pipeline">
-  <span class="node config">BatchDebug<br>Config</span>
+  <span class="node">🖼 D站选图<br><small>AnimaDex + Danbooru</small></span>
   <span class="arrow">→</span>
-  <span class="node execute">BatchDebug<br>Execute</span>
+  <span class="node">🏷 Tag 反推<br><small>AnimaPromptConverter</small></span>
   <span class="arrow">→</span>
-  <span class="node save">BatchDebug<br>GridSave</span>
+  <span class="node config">⚙ 配置扫描<br><small>6槽LoRA + CFG</small></span>
+  <span class="arrow">→</span>
+  <span class="node execute">🚀 批量执行<br><small>笛卡尔积</small></span>
+  <span class="arrow">→</span>
+  <span class="node save">📦 结构化输出<br><small>sweep文件夹</small></span>
+  <span class="arrow">→</span>
+  <span class="node">⭐ 评分筛选<br><small>viewer.html</small></span>
+</div>
+
+<p>不需要手写 prompt。D站选图 → Tag 自动反推 → 参数扫描 → 出图 → HTML 打分，全链路。</p>
+
+<!-- ─────────────────────────────────────────── -->
+<h2>二、输出结构</h2>
+<p>每次扫描生成一个独立文件夹：</p>
+
+<div class="folder-tree">
+sweep_20260621_163000/<br>
+├── img_0000.png          <span class="comment">← 每张原图，序号与参数对应</span><br>
+├── img_0001.png<br>
+├── ...<br>
+├── grid.png              <span class="comment">← 拼图预览</span><br>
+├── metadata.csv          <span class="comment">← 参数表</span><br>
+├── report.json           <span class="comment">← viewer 数据源</span><br>
+└── viewer.html           <span class="comment">← 双击打开，拖入 report.json 即可评分</span>
 </div>
 
 <!-- ─────────────────────────────────────────── -->
-<h2>二、节点详解</h2>
+<h2>三、三个节点</h2>
 
-<!-- Node 1 -->
 <div class="card">
-  <h3><span class="badge badge-purple">Config</span> BatchDebugConfig — 6 槽 LoRA 扫描</h3>
-  <p>下拉选取 LoRA → 开关 ON/OFF → 设权重范围。<strong>6 个槽独立控制，多 LoRA 做笛卡尔积。</strong></p>
-
+  <h3><span class="badge badge-purple">Config</span> BatchDebugConfig</h3>
+  <p>6 个 LoRA 槽，每个独立：下拉选模型 / 开关 / 权重范围(min→max×步数)。配合 CFG 和 Steps 扫描范围，所有参数做笛卡尔积。</p>
   <table>
     <tr><th>参数</th><th>类型</th><th>说明</th></tr>
-    <tr>
-      <td><code>prompts</code></td>
-      <td>多行文本</td>
-      <td><strong>留空即可</strong>——D站 pipeline 接管 prompt。</td>
-    </tr>
-    <tr>
-      <td><code>lora_weight_clip</code></td>
-      <td>Float</td>
-      <td>全局 CLIP 倍率，对所有 LoRA 的 clip weight 生效。</td>
-    </tr>
-    <tr><td><code>cfg_min / max / steps</code></td><td>Float / Int</td><td>CFG 扫描。如 3→9 分 4 步 → [3, 5, 7, 9]</td></tr>
-    <tr><td><code>seed</code></td><td>Int</td><td><strong>固定 seed</strong>，所有组合共用。</td></tr>
-    <tr><td><code>steps_min / max / count</code></td><td>Int</td><td>采样步数扫描。</td></tr>
+    <tr><td><code>prompts</code></td><td>多行</td><td>留空即可——D站 pipeline 接管</td></tr>
+    <tr><td><code>lora_N_enabled</code></td><td>开关</td><td>ON 才参与扫描</td></tr>
+    <tr><td><code>lora_N_name</code></td><td>下拉</td><td>自动列出 ComfyUI loras 目录所有文件</td></tr>
+    <tr><td><code>lora_N_weight_min/max/steps</code></td><td>Float/Int</td><td>权重扫描范围</td></tr>
+    <tr><td><code>cfg/steps/seed</code></td><td>Float/Int</td><td>扫描范围 + 固定 seed（公平对比）</td></tr>
   </table>
-
-  <h4>🔧 6 个 LoRA 槽（每槽独立）</h4>
-  <table>
-    <tr><th>槽参数</th><th>类型</th><th>说明</th></tr>
-    <tr><td><code>lora_N_enabled</code></td><td>BOOLEAN</td><td><strong>开关</strong>——ON 才参与扫描。</td></tr>
-    <tr><td><code>lora_N_name</code></td><td>下拉</td><td><strong>自动列出</strong> <code>ComfyUI/models/loras/</code> 下所有文件。</td></tr>
-    <tr><td><code>lora_N_weight_min / max / steps</code></td><td>Float / Int</td><td>权重扫描范围。如 0.30→1.00 ×3 → [0.3, 0.65, 1.0]</td></tr>
-  </table>
-
-  <div class="tip">
-    <strong>💡 示例：</strong>开 LoRA #1 动画画风 0.3→1.0 ×3，开 LoRA #2 美学增强 0.5→1.5 ×2<br>
-    LoRA 组合 = 3×2 = 6，配 4 CFG × 2 Steps = <strong>48 张</strong>
-  </div>
 </div>
 
-<!-- Node 2 -->
 <div class="card">
-  <h3><span class="badge badge-purple">Execute</span> BatchDebugExecute — 批量执行引擎</h3>
-  <p>接收上游的 MODEL / CLIP / VAE / CONDITIONING / LATENT，遍历所有参数组合，每轮跑 KSampler + VAE 解码，输出所有图片 + 元数据 JSON。</p>
-
+  <h3><span class="badge badge-purple">Execute</span> BatchDebugExecute</h3>
+  <p>接收上游 MODEL/CLIP/VAE/CONDITIONING/LATENT，遍历所有参数组合。链式叠加多 LoRA → 编码/直通 conditioning → KSampler → VAE 解码。</p>
   <table>
-    <tr><th>参数</th><th>类型</th><th>说明</th></tr>
-    <tr><td><code>model / clip / vae</code></td><td>MODEL / CLIP / VAE</td><td>从 UNETLoader / CLIPLoader / VAELoader 接入。</td></tr>
-    <tr><td><code>positive / negative</code></td><td>CONDITIONING</td><td>从 CLIPTextEncode 接入。<strong>在 conditioning 模式下直通使用，不重新编码。</strong></td></tr>
-    <tr><td><code>latent_image</code></td><td>LATENT</td><td>从 EmptyLatentImage 接入，控制出图分辨率。</td></tr>
-    <tr><td><code>config_json</code></td><td>STRING</td><td>从 BatchDebugConfig 接入。</td></tr>
-    <tr><td><code>prompt_source</code></td><td>下拉</td><td><strong>关键参数</strong>，见下方详解。</td></tr>
-    <tr><td><code>sampler_name</code></td><td>下拉</td><td>采样器（euler / dpmpp_2m / …）。从 ComfyUI 实时拉取列表。</td></tr>
-    <tr><td><code>scheduler</code></td><td>下拉</td><td>调度器（normal / karras / sgm_uniform / …）。</td></tr>
-    <tr><td><code>denoise</code></td><td>Float</td><td>降噪强度，图生图时使用。纯文生图保持 1.0。</td></tr>
+    <tr><th>参数</th><th>说明</th></tr>
+    <tr><td><code>prompt_source</code></td><td><strong>conditioning</strong>：上游 CLIPTextEncode 直通（推荐，支持 AnimaPromptConverter）；<strong>reencode</strong>：节点内重新编码</td></tr>
+    <tr><td><code>save_preview</code></td><td>每轮实时存预览图到 output 目录</td></tr>
+    <tr><td><code>sampler/scheduler/denoise</code></td><td>采样器配置</td></tr>
   </table>
-
-  <h4>🔑 prompt_source 两种模式</h4>
-  <div class="modes">
-    <div class="mode-card active">
-      <h4>✨ conditioning（推荐）</h4>
-      <p>使用上游 CLIPTextEncode 的 conditioning，<strong>不重新编码 prompt</strong>。<br><br>
-      这样你可以把 AnimaPromptConverter → CLIPTextEncode 接进来，prompt 质量 = 工作流原生质量。<br><br>
-      Config 里的 prompt 文本仅用于元数据标注和文件名。</p>
-    </div>
-    <div class="mode-card">
-      <h4>📝 reencode</h4>
-      <p>每轮用 Config 的 prompt 文本重新调用 <code>clip.tokenize() → encode_from_tokens_scheduled()</code>。<br><br>
-      适合不需要 AnimaPromptConverter 的场景（如英文 prompt 直出），或需要每轮动态改 prompt 文本。</p>
-    </div>
-  </div>
-
-  <div class="warning">
-    ⚠ <strong>中断安全：</strong>循环中用 try/finally 包裹，LoRA 缓存在用户中断或异常时自动释放，不会泄漏 GPU 内存。
-  </div>
+  <div class="tip"><strong>conditioning 模式：</strong>用户接 AnimaPromptConverter → CLIPTextEncode 的 conditioning，Execute 不重新编码 prompt，保证画质与工作流一致。</div>
 </div>
 
-<!-- Node 3 -->
 <div class="card">
-  <h3><span class="badge badge-green">GridSave</span> BatchDebugGridSave — 结果保存（输出节点）</h3>
-  <p>接收 Execute 的图片批次和元数据，输出三样东西：单张图、标注网格图、CSV 评分表。</p>
-
+  <h3><span class="badge badge-green">GridSave</span> BatchDebugGridSave</h3>
+  <p>接收图片批次 → 输出结构化 sweep 文件夹（单张图 + 拼图 + CSV + report.json + viewer.html）。</p>
   <table>
-    <tr><th>参数</th><th>类型</th><th>说明</th></tr>
-    <tr><td><code>images</code></td><td>IMAGE</td><td>从 Execute 的 images 输出接入。</td></tr>
-    <tr><td><code>metadata_json</code></td><td>STRING</td><td>从 Execute 的 metadata_json 输出接入。</td></tr>
-    <tr><td><code>columns</code></td><td>Int</td><td>网格列数。默认 4。</td></tr>
-    <tr><td><code>cell_width</code></td><td>Int</td><td>网格每格宽度（像素）。默认 256。不同分辨率图片会自动缩放并居中。</td></tr>
-    <tr><td><code>max_grid_dimension</code></td><td>Int</td><td>网格最大宽/高，超出自动缩放。默认 4096。</td></tr>
-    <tr><td><code>label_font_size</code></td><td>Int</td><td>标注字体大小。默认 16。自动 fallback：Arial → 微软雅黑 → DejaVu。</td></tr>
-    <tr><td><code>label_format</code></td><td>String</td><td>标注格式模板。变量：<code>{prompt}</code> <code>{lora_info}</code> <code>{cfg:.1f}</code> <code>{seed}</code> <code>{steps}</code> <code>{sampler}</code> <code>{scheduler}</code> <code>{index}</code><br>默认：<code>C:{cfg:.1f} L:{lora_info}</code></td></tr>
-    <tr><td><code>filename_prefix</code></td><td>String</td><td>输出子目录。支持 <code>%date:yyyy-MM-dd%</code> 和 <code>%time:HH-mm-ss%</code> 占位符。</td></tr>
-    <tr><td><code>save_individual</code></td><td>Bool</td><td>是否保存单张图。文件名含完整参数：<code>{prompt}_lora0.50_cfg7.0_seed42_00001.png</code></td></tr>
-    <tr><td><code>save_grid</code></td><td>Bool</td><td>是否保存标注网格对比图。</td></tr>
-    <tr><td><code>save_metadata_csv</code></td><td>Bool</td><td>是否导出 CSV 元数据表（含所有参数列 + 文件名），方便后续打分筛选。</td></tr>
+    <tr><th>参数</th><th>说明</th></tr>
+    <tr><td><code>columns/cell_width</code></td><td>拼图列数/格宽，标签自动截断适配</td></tr>
+    <tr><td><code>label_format</code></td><td>标注模板，变量：<code>{lora_info} {cfg} {steps}</code></td></tr>
+    <tr><td><code>filename_prefix</code></td><td>输出子目录，支持日期占位符</td></tr>
+    <tr><td><code>save_*</code></td><td>独立开关：原图/拼图/CSV</td></tr>
   </table>
-
-  <div class="tip">
-    <strong>💡 CSV 用法：</strong>用 Excel / Numbers 打开，加一列"评分"，对每张图打分 1-5，筛选 4 分以上的看共同参数 → 你就知道最佳 CFG/Seed/Steps 区间了。
-  </div>
 </div>
 
 <!-- ─────────────────────────────────────────── -->
-<h2>三、D站 Pipeline 工作流（推荐）</h2>
+<h2>四、评分查看器</h2>
 
+<p><code>viewer.html</code> 是独立可复用工具——扫 100 次也只用这一个：</p>
+
+<table>
+  <tr><th>功能</th><th>操作</th></tr>
+  <tr><td>⭐ 评分</td><td>点击卡片下方星星打分（1-5），评分存在浏览器本地</td></tr>
+  <tr><td>🔍 筛选</td><td>按 CFG / Steps / LoRA 下拉筛选，或搜索关键词</td></tr>
+  <tr><td>📊 排序</td><td>按序号/CFG/Steps/评分排序</td></tr>
+  <tr><td>🖼 放大</td><td>双击图片 lightbox 全屏查看</td></tr>
+  <tr><td>📥 导出</td><td>一键导出带评分的 CSV，可进 Excel 继续分析</td></tr>
+  <tr><td>📂 加载</td><td>拖入 report.json 即加载（浏览器安全策略不影响拖拽）</td></tr>
+</table>
+
+<div class="tip"><strong>使用：</strong>打开 sweep 文件夹 → 双击 viewer.html → 拖入同目录的 report.json → 开始打分。</div>
+
+<!-- ─────────────────────────────────────────── -->
+<h2>五、D站 Pipeline 工作流</h2>
 <div class="pipeline">
-  <span class="node">AnimaDex<br>Browser</span>
-  <span class="arrow">→</span>
-  <span class="node">Danbooru<br>Browser</span>
-  <span class="arrow">→</span>
-  <span class="node">AnimaPrompt<br>Converter</span>
-  <span class="arrow">→</span>
-  <span class="node">CLIPText<br>Encode</span>
-  <span class="arrow">→</span>
-  <span class="node execute">BatchDebug<br>Execute</span>
-  <span class="arrow">→</span>
-  <span class="node save">Grid<br>Save</span>
+  <span class="node">AnimaDexBrowser</span><span class="arrow">→</span>
+  <span class="node">DanbooruBrowser</span><span class="arrow">→</span>
+  <span class="node">AnimaPromptConverter</span><span class="arrow">→</span>
+  <span class="node">CLIPTextEncode</span><span class="arrow">→</span>
+  <span class="node execute">BatchDebugExecute</span><span class="arrow">→</span>
+  <span class="node save">GridSave</span>
 </div>
-
-<p style="margin-top:.5rem;color:var(--muted);font-size:.85rem;">
-  ↑ 选好 D站 artist + 图片 → Tag 自动反推 → AnimaPromptConverter 拼装 → conditioning 直通 Execute。<br>
-  <strong>不需要手写 prompt。</strong>只改 BatchDebugConfig 里的 LoRA 和 CFG 范围，点 Queue 即可。
-</p>
+<p style="color:var(--muted);font-size:.85rem">选 artist → 选图 → Tag 反推 → 自动化扫描。拖入 <code>d站_loRA_对比_workflow.json</code> 即可开始。</p>
 
 <!-- ─────────────────────────────────────────── -->
-<h2>四、快速上手</h2>
+<h2>六、技术要点</h2>
+<table>
+  <tr><th>特性</th><th>实现</th></tr>
+  <tr><td>多 LoRA 链式</td><td><code>load_lora_for_models</code> 逐层叠加，模型自动 clone 不污染原始引用</td></tr>
+  <tr><td>Conditioning 直通</td><td>上游 CLIPTextEncode 的 conditioning 直接传给 KSampler，不重新编码——保证 D站 tag 拼装质量</td></tr>
+  <tr><td>去重保护</td><td>min==max 时自动去重，不会生成重复参数组合</td></tr>
+  <tr><td>中断安全</td><td>try/finally 包裹循环 + LoRA 缓存清理，Ctrl+C 不会泄漏 GPU 内存</td></tr>
+  <tr><td>零依赖</td><td>仅使用 ComfyUI 内置 torch/numpy/PIL，无需额外 pip install</td></tr>
+</table>
 
-<ol style="margin-left:1.5rem;color:var(--text);">
-  <li><strong>启动 ComfyUI</strong>（确认日志有 <code>loaded 3 nodes</code>）</li>
-  <li><strong>拖入 <code>d站_loRA_对比_workflow.json</code></strong></li>
-  <li>在 AnimaDexBrowser 中选一个 artist（如 <code>piromizu</code>）</li>
-  <li>在 DanbooruBrowser 中选一张参考图</li>
-  <li>在 BatchDebugConfig 的 <code>lora_sweep</code> 中填你要测的 LoRA：<br>
-    <code>anima线稿画风.safetensors 0.3 1.0 3</code><br>
-    <code>anima美学增强，高清.safetensors 0.5 1.5 2</code></li>
-  <li>设 CFG 范围（如 3→9 分 4 步）</li>
-  <li>点 Queue，等终端出进度日志</li>
-  <li>到 <code>ComfyUI/output/batch_debug/d站_loRA对比/</code> 看结果</li>
-</ol>
+<!-- ─────────────────────────────────────────── -->
+<h2>七、简历描述参考</h2>
+<div class="resume-block">
+
+<h4 style="color:var(--accent)">一句话</h4>
+<pre>为 ComfyUI 开发的批量参数扫描插件，支持多 LoRA 链式笛卡尔积扫描 + D站自动取词 + 交互评分系统，将 AI 绘图调参效率提升 10×。</pre>
+
+<h4 style="color:var(--accent);margin-top:1rem">技术向</h4>
+<pre>ComfyUI Custom Node 插件开发。实现 6 槽 LoRA 配置器、笛卡尔积扫描引擎、conditioning 直通模式对接 AnimaPromptConverter。输出结构化 sweep 文件夹 + report.json，配套可复用 HTML 评分查看器（筛选/排序/星级评分/CSV 导出）。多 LoRA 链式叠加、中断安全的内存管理、零额外 pip 依赖。</pre>
+
+<h4 style="color:var(--accent);margin-top:1rem">关键能力标签</h4>
+<pre>ComfyUI Custom Node · Python · 工作流自动化 · AIGC 工具链 · LoRA & CFG 参数调优 · HTML/CSS/JS</pre>
+
+</div>
 
 <hr>
-
-<div class="footer">
-  ComfyUI Batch Debug Plugin · v2.0 · 多 LoRA 链式扫描 · D站 Pipeline 集成<br>
-  开发规范见 <code>comfyui-plugin-dev</code> skill
-</div>
+<div class="footer">ComfyUI Batch Debug Plugin · v2.1 · 开源</div>
 
 </body>
 </html>
