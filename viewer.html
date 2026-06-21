@@ -5,167 +5,241 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Batch Debug Viewer</title>
 <style>
-:root{--bg:#0d1117;--srf:#161b22;--bdr:#30363d;--tx:#c9d1d9;--mu:#8b949e;--ac:#58a6ff;--gr:#3fb950;--or:#d2991d;--rd:#f85149}
+:root{--bg:#0d1117;--srf:#161b22;--bdr:#30363d;--tx:#c9d1d9;--mu:#8b949e;--ac:#58a6ff;--gr:#3fb950}
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:var(--bg);color:var(--tx);font-family:-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;padding:16px;min-height:100vh;position:relative}
-body::before{content:'';position:fixed;inset:0;background-size:cover;background-position:center;filter:blur(40px) brightness(.15);z-index:-1;transition:background-image .5s}
-h1{font-size:1.2rem;color:#fff;margin-bottom:4px}
-.meta{color:var(--mu);font-size:.8rem;margin-bottom:12px}
-.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;padding:10px;background:var(--srf);border:1px solid var(--bdr);border-radius:6px}
-.toolbar label{font-size:.78rem;color:var(--mu)}
-.toolbar select,.toolbar button,.toolbar input{padding:4px 8px;border-radius:4px;border:1px solid var(--bdr);background:var(--bg);color:var(--tx);font-size:.8rem;cursor:pointer}
+body{background:var(--bg);color:var(--tx);font-family:-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;padding:16px;min-height:100vh}
+h1{font-size:1.15rem;color:#fff;margin-bottom:2px}
+.meta{color:var(--mu);font-size:.75rem;margin-bottom:12px}
+.toolbar{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+.toolbar button{padding:4px 10px;border-radius:4px;border:1px solid var(--bdr);background:var(--srf);color:var(--tx);cursor:pointer;font-size:.78rem}
 .toolbar button.primary{background:var(--ac);color:#fff;border-color:var(--ac)}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:4px}
-.card{background:var(--srf);border:1px solid var(--bdr);border-radius:4px;overflow:hidden;cursor:pointer;transition:border-color .15s;position:relative}
-.card:hover{border-color:var(--ac)}
-.card img{width:100%;display:block;aspect-ratio:3/4;object-fit:cover}
-.card .info{padding:4px 6px;font-size:.72rem;color:var(--mu);display:flex;justify-content:space-between;flex-wrap:wrap}
-.card .score{display:flex;gap:1px;padding:2px 6px 4px}
-.card .score span{font-size:.9rem;cursor:pointer;opacity:.3;transition:opacity .1s}
-.card .score span.on,.card .score:hover span{opacity:1}
-.card .score:hover span:hover~span{opacity:.3}
-.card.picked{border-color:var(--gr);border-width:2px}
-.card .idx{position:absolute;top:2px;left:4px;font-size:.65rem;background:#0008;color:#fff;padding:1px 4px;border-radius:3px;pointer-events:none}
-.empty{grid-column:1/-1;text-align:center;padding:40px;color:var(--mu)}
+.stats{font-size:.75rem;color:var(--mu);margin-bottom:8px}
+
+/* Matrix (2-var) */
+.matrix-wrap{overflow-x:auto}
+.matrix{border-collapse:collapse;font-size:.72rem}
+.matrix th,.matrix td{border:1px solid var(--bdr);padding:3px;text-align:center;vertical-align:top}
+.matrix th{background:var(--srf);color:var(--mu);font-weight:600;white-space:nowrap;min-width:50px}
+.matrix th.corner{background:var(--bg);border:none}
+.matrix th.row-label{text-align:right;padding-right:6px;color:var(--ac)}
+.matrix td img{width:100px;display:block;border-radius:2px}
+
+/* Grouped (1-var / 3+-var) */
+.section{margin-bottom:20px}
+.section h3{font-size:.85rem;color:var(--ac);margin-bottom:6px;padding-bottom:3px;border-bottom:1px solid var(--bdr)}
+.section .row{display:flex;gap:4px;flex-wrap:wrap}
+.section .row .item{text-align:center}
+.section .row .item img{width:120px;display:block;border-radius:2px}
+.section .row .item .label{font-size:.68rem;color:var(--mu);margin-top:2px}
+
+.score{display:flex;justify-content:center;gap:0;margin-top:2px}
+.score span{cursor:pointer;font-size:.75rem;opacity:.2;transition:opacity .1s}
+.score span.on,.score:hover span{opacity:1}
+.score:hover span:hover~span{opacity:.2}
+
 #drop{position:fixed;inset:0;background:#000c;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.5rem;z-index:999;flex-direction:column;text-align:center;line-height:2}
 #drop small{font-size:.9rem;color:var(--mu)}
-.stats{display:flex;gap:16px;font-size:.78rem;color:var(--mu);margin-bottom:8px}
-.stats b{color:var(--tx)}
+#lb{display:none;position:fixed;inset:0;background:#000e;z-index:999;align-items:center;justify-content:center}
+#lb img{max-width:90vw;max-height:90vh}
 </style>
 </head>
 <body>
 
-<div id="drop">
-  📂 <b>拖入 report.json</b>
-  <small>浏览器限制，请从 sweep 文件夹拖入</small>
-</div>
+<div id="drop">📂 <b>拖入 report.json</b><small>浏览器限制，请从 sweep 文件夹拖入</small></div>
 
 <div id="app" style="display:none">
   <h1>🔬 Batch Debug Viewer</h1>
   <div class="meta" id="meta"></div>
-  <div class="stats" id="stats"></div>
   <div class="toolbar">
-    <label>CFG <select id="f_cfg"><option value="">全部</option></select></label>
-    <label>Steps <select id="f_steps"><option value="">全部</option></select></label>
-    <label>LoRA <select id="f_lora"><option value="">全部</option></select></label>
-    <label>搜索 <input id="f_search" placeholder="关键词..."></label>
-    <label>排序 <select id="f_sort"><option value="index">序号</option><option value="cfg">CFG</option><option value="steps">Steps</option><option value="score">评分↓</option></select></label>
-    <button class="primary" onclick="exportCSV()">📥 导出评分CSV</button>
-    <button onclick="resetScores()">🔄 清空评分</button>
-    <span style="margin-left:auto;font-size:.75rem;color:var(--mu)">💡 点击⭐打分 · 双击图片放大</span>
+    <button class="primary" onclick="exportCSV()">📥 导出评分</button>
+    <button onclick="resetScores()">🔄 清空</button>
   </div>
-  <div class="grid" id="grid"></div>
+  <div class="stats" id="stats"></div>
+  <div id="content"></div>
 </div>
 
-<div id="lightbox" style="display:none;position:fixed;inset:0;background:#000e;z-index:999;align-items:center;justify-content:center" onclick="this.style.display='none'">
-  <img id="lb_img" style="max-width:90vw;max-height:90vh;object-fit:contain">
-</div>
+<div id="lb" onclick="this.style.display='none'"><img id="lb_img"></div>
 
 <script>
-let data = null;
-let scores = {};
+let data=null, scores={}, varyingParams=[], varyingLabels=[];
 
-// Load from drag or fetch
-async function loadReport(file) {
-  try {
-    let json;
-    if (file) {
-      json = JSON.parse(await file.text());
-    } else {
-      const r = await fetch('report.json');
-      if (!r.ok) throw new Error('HTTP '+r.status);
-      json = await r.json();
+// ─── Load ───
+async function loadReport(file){
+  try{
+    let json=file?JSON.parse(await file.text()):await(await fetch('report.json')).json();
+    data=json;
+    scores=JSON.parse(localStorage.getItem('bd_scores_'+data.sweep_id)||'{}');
+    detectVarying();
+    render();
+    document.getElementById('app').style.display='block';
+    document.getElementById('drop').style.display='none';
+  }catch(e){document.getElementById('drop').style.display='flex'}
+}
+
+// ─── Detect which parameters vary ───
+function detectVarying(){
+  const imgs=data.images; if(!imgs.length) return;
+  varyingParams=[]; varyingLabels=[];
+  
+  // Check CFG
+  const cfgs=[...new Set(imgs.map(i=>i.cfg))];
+  if(cfgs.length>1){varyingParams.push('cfg'); varyingLabels.push('CFG')}
+  
+  // Check steps
+  const steps=[...new Set(imgs.map(i=>i.steps))];
+  if(steps.length>1){varyingParams.push('steps'); varyingLabels.push('Steps')}
+  
+  // Parse lora_info into structured LoRA weights
+  const allLoraNames=[...new Set(imgs.map(i=>parseLoraWeights(i.lora_info).map(l=>l.name)).flat())];
+  allLoraNames.forEach(name=>{
+    const vals=[...new Set(imgs.map(i=>{
+      const lw=parseLoraWeights(i.lora_info);
+      const found=lw.find(l=>l.name===name);
+      return found?found.weight:null;
+    }).filter(v=>v!==null))];
+    if(vals.length>1){varyingParams.push('lora:'+name); varyingLabels.push(name)}
+  });
+}
+
+function parseLoraWeights(info){
+  if(!info||info==='none') return [];
+  return info.split('+').map(p=>{
+    const idx=p.lastIndexOf(':'); if(idx<0) return {name:p.trim(),weight:0};
+    return {name:p.substring(0,idx).trim(),weight:parseFloat(p.substring(idx+1))};
+  });
+}
+
+// ─── Get varying values for an image ───
+function getVaryingValues(img){
+  return varyingParams.map(p=>{
+    if(p==='cfg') return img.cfg;
+    if(p==='steps') return img.steps;
+    if(p.startsWith('lora:')){
+      const name=p.substring(5);
+      const found=parseLoraWeights(img.lora_info).find(l=>l.name===name);
+      return found?found.weight:0;
     }
-    data = json;
-    scores = JSON.parse(localStorage.getItem('bd_scores_'+data.sweep_id)||'{}');
-    initUI();
-  } catch(e) {
-    document.getElementById('drop').style.display = 'flex';
-  }
+    return null;
+  });
 }
 
-function initUI() {
-  document.getElementById('app').style.display = 'block';
-  document.getElementById('drop').style.display = 'none';
-  // Use first sweep image as blurred background
-  if(data.images&&data.images[0]){
-    const bg=new Image();bg.onload=()=>document.body.style.setProperty('--bg-img',`url(${data.images[0].file})`);
-    bg.src=data.images[0].file;
-    document.body.style.backgroundImage=`url(${data.images[0].file})`;
+// ─── Render ───
+function render(){
+  const imgs=data.images; if(!imgs.length) return;
+  document.getElementById('meta').textContent=
+    `sweep ${data.sweep_id} · ${imgs.length}张 · sampler=${data.sampler} · seed=${data.seed}`;
+  
+  const n=varyingParams.length;
+  let html='';
+  if(n===0){
+    // Nothing varies — just show all images
+    html=renderGrouped(imgs, '全部');
+  }else if(n===2){
+    html=renderMatrix(imgs);
+  }else{
+    // 1 or 3+: grouped by first varying param
+    html=renderGroupedByFirst(imgs);
   }
-  document.getElementById('meta').textContent =
-    `扫描 ${data.sweep_id} · ${data.total} 张 · sampler=${data.sampler} · scheduler=${data.scheduler} · seed=${data.seed}`;
-  ['f_cfg','f_steps','f_lora'].forEach(id=>document.getElementById(id).innerHTML='<option value="">全部</option>');
-  const cfgs=[...new Set(data.images.map(i=>i.cfg))].sort((a,b)=>a-b);
-  const steps=[...new Set(data.images.map(i=>i.steps))].sort((a,b)=>a-b);
-  const loras=[...new Set(data.images.map(i=>i.lora_info))].filter(Boolean).sort();
-  fillSelect('f_cfg',cfgs);fillSelect('f_steps',steps);fillSelect('f_lora',loras);
-  renderGrid();
+  
+  document.getElementById('content').innerHTML=html;
+  document.getElementById('stats').innerHTML=
+    `变量: ${varyingLabels.join(' × ')} · 已评分 <b>${Object.values(scores).filter(v=>v>0).length}</b>`;
 }
 
-function fillSelect(id,vals){const s=document.getElementById(id);vals.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;s.appendChild(o)})}
+// ─── Matrix (2 vars) ───
+function renderMatrix(imgs){
+  const vals0=[...new Set(imgs.map(i=>getVaryingValues(i)[0]))].sort((a,b)=>a-b);
+  const vals1=[...new Set(imgs.map(i=>getVaryingValues(i)[1]))].sort((a,b)=>a-b);
+  const label0=varyingLabels[0], label1=varyingLabels[1];
+  
+  const map={};
+  imgs.forEach(img=>{
+    const v=getVaryingValues(img);
+    map[`${v[0]}:${v[1]}`]=img;
+  });
+  
+  let h='<div class="matrix-wrap"><table class="matrix"><tr><th class="corner"></th>';
+  vals1.forEach(v=>h+=`<th>${label1}<br>${typeof v==='number'?v.toFixed(2):v}</th>`);
+  h+='</tr>';
+  vals0.forEach(rv=>{
+    h+=`<tr><th class="row-label">${label0}<br>${typeof rv==='number'?rv.toFixed(2):rv}</th>`;
+    vals1.forEach(cv=>{
+      const img=map[`${rv}:${cv}`];
+      if(img) h+=`<td>${imgCell(img)}</td>`;
+      else h+='<td></td>';
+    });
+    h+='</tr>';
+  });
+  return h+'</table></div>';
+}
 
-function rate(imgIdx,star){
-  const key=data.images[imgIdx].file,cur=scores[key]||0;
-  scores[key]=(cur===star)?0:star;
+// ─── Grouped by first varying param (1 or 3+ vars) ───
+function renderGroupedByFirst(imgs){
+  const vals=[...new Set(imgs.map(i=>getVaryingValues(i)[0]))].sort((a,b)=>a-b);
+  const label=varyingLabels[0];
+  let h='';
+  vals.forEach(v=>{
+    const group=imgs.filter(i=>getVaryingValues(i)[0]===v);
+    h+=renderGrouped(group, `${label}=${typeof v==='number'?v.toFixed(2):v}`);
+  });
+  return h;
+}
+
+function renderGrouped(imgs, title){
+  let h=`<div class="section"><h3>${title}</h3><div class="row">`;
+  imgs.forEach(img=>{
+    const vals=getVaryingValues(img).slice(1); // remaining vars
+    const subLabel=vals.map((v,i)=>`${varyingLabels[i+1]||''}=${typeof v==='number'?v.toFixed(2):v}`).join(' ');
+    h+=`<div class="item">${imgOnly(img)}<div class="label">${subLabel}</div></div>`;
+  });
+  return h+'</div></div>';
+}
+
+function imgCell(img){
+  const sc=scores[img.file]||0;
+  return `<img src="${img.file}" loading="lazy" ondblclick="showLB('${img.file}')" 
+    onerror="this.style.minHeight='140px';this.style.background='#222'"><div class="score">${stars(img,sc)}</div>`;
+}
+function imgOnly(img){
+  const sc=scores[img.file]||0;
+  return `<img src="${img.file}" loading="lazy" ondblclick="showLB('${img.file}')"
+    onerror="this.style.minHeight='160px';this.style.background='#222'"><div class="score">${stars(img,sc)}</div>`;
+}
+function stars(img,sc){
+  return [1,2,3,4,5].map(s=>
+    `<span class="${s<=sc?'on':''}" onclick="event.stopPropagation();rate('${img.file}',${s})">★</span>`
+  ).join('');
+}
+
+// ─── Scoring ───
+function rate(file,star){
+  const cur=scores[file]||0;
+  scores[file]=(cur===star)?0:star;
   localStorage.setItem('bd_scores_'+data.sweep_id,JSON.stringify(scores));
-  renderGrid();
+  render();
 }
-function resetScores(){scores={};localStorage.removeItem('bd_scores_'+data.sweep_id);renderGrid()}
+function resetScores(){scores={};localStorage.removeItem('bd_scores_'+data.sweep_id);render();}
 
-function renderGrid(){
-  const grid=document.getElementById('grid');
-  const fc=document.getElementById('f_cfg').value,fs=document.getElementById('f_steps').value;
-  const fl=document.getElementById('f_lora').value,fq=document.getElementById('f_search').value.toLowerCase();
-  const sort=document.getElementById('f_sort').value;
-  let f=data.images.map((img,i)=>({...img,_idx:i}));
-  if(fc) f=f.filter(i=>String(i.cfg)===fc);
-  if(fs) f=f.filter(i=>String(i.steps)===fs);
-  if(fl) f=f.filter(i=>i.lora_info===fl);
-  if(fq) f=f.filter(i=>i.lora_info.toLowerCase().includes(fq)||i.file.includes(fq));
-  if(sort==='cfg') f.sort((a,b)=>a.cfg-b.cfg);
-  else if(sort==='steps') f.sort((a,b)=>a.steps-b.steps);
-  else if(sort==='score') f.sort((a,b)=>(scores[b.file]||0)-(scores[a.file]||0));
-  else f.sort((a,b)=>a._idx-b._idx);
-  document.getElementById('stats').innerHTML=`<span>显示 <b>${f.length}</b>/${data.total}</span><span>已评分 <b>${Object.values(scores).filter(v=>v>0).length}</b></span>`;
-  grid.innerHTML=f.length?f.map(img=>{
-    const sc=scores[img.file]||0;
-    const stars=[1,2,3,4,5].map(s=>`<span class="${s<=sc?'on':''}" onclick="event.stopPropagation();rate(${img._idx},${s})">★</span>`).join('');
-    return `<div class="card${sc>0?' picked':''}" ondblclick="showLightbox('${img.file}')">
-      <div class="idx">#${img._idx}</div>
-      <img src="${img.file}" loading="lazy" onerror="this.style.background='#222'">
-      <div class="info"><span>${img.lora_info||'-'}</span><span>cfg ${img.cfg}</span><span>st ${img.steps}</span></div>
-      <div class="score">${stars}</div>
-    </div>`;
-  }).join(''):'<div class="empty">没有匹配结果</div>';
-}
+// ─── Lightbox ───
+function showLB(file){document.getElementById('lb_img').src=file;document.getElementById('lb').style.display='flex'}
+document.getElementById('lb').addEventListener('click',function(e){if(e.target===this)this.style.display='none'});
 
-function showLightbox(file){document.getElementById('lb_img').src=file;document.getElementById('lightbox').style.display='flex'}
-document.getElementById('lightbox').addEventListener('click',function(e){if(e.target===this)this.style.display='none'});
-
+// ─── Export ───
 function exportCSV(){
-  const rows=[['index','file','lora_info','cfg','steps','score']];
-  data.images.forEach((img,i)=>rows.push([i,img.file,img.lora_info,img.cfg,img.steps,scores[img.file]||0]));
+  const rows=[['file',...varyingLabels,'score']];
+  data.images.forEach(img=>{
+    rows.push([img.file,...getVaryingValues(img).map(v=>typeof v==='number'?v.toFixed(3):v),scores[img.file]||0]);
+  });
   const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
-  const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='scores_'+data.sweep_id+'.csv';a.click();
+  const b=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='scores_'+data.sweep_id+'.csv';a.click();
 }
 
-// Drag & drop
-const drop=document.getElementById('drop');
-document.addEventListener('dragover',e=>{e.preventDefault()});
-document.addEventListener('drop',e=>{
-  e.preventDefault();
-  const f=e.dataTransfer.files[0];
-  if(f&&f.name.endsWith('.json')) loadReport(f);
-});
+// ─── Drag & drop ───
+document.addEventListener('dragover',e=>e.preventDefault());
+document.addEventListener('drop',e=>{e.preventDefault();const f=e.dataTransfer.files[0];if(f&&f.name.endsWith('.json'))loadReport(f)});
 
-// Filter live
-['f_cfg','f_steps','f_lora','f_search','f_sort'].forEach(id=>
-  document.getElementById(id).addEventListener(id==='f_search'?'input':'change',renderGrid)
-);
-
-// Auto-try fetch on load
+// ─── Auto-load ───
 setTimeout(()=>{if(!data)loadReport()},100);
 </script>
 </body>
